@@ -3,7 +3,7 @@ class Config:
         pass
 
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
-    SQLALCHEMY_DATABASE_URI = "mysql+pymysql://root:187125@localhost/ww"
+    SQLALCHEMY_DATABASE_URI = "mysql+pymysql://root:187125@localhost/school"
     SECRET_KEY = 'school'
 
     @staticmethod
