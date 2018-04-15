@@ -153,6 +153,23 @@ class Teacher(db.Model):
                 res.append(c)
         return res
 
+    def get_attence_record(self, e_course_id, cur_page):
+        pagination = AttendanceRecord.query.filter(AttendanceRecord.established_course_id == e_course_id).paginate(
+            cur_page, 10, False)
+        has_next_page = (False if pagination.page == pagination.pages else True)
+        records = []
+        for item in pagination.items:
+            absence = item.absences.count()
+            records.append({
+                "record_id": item.id,
+                "type": item.attendance_type,
+                "total": item.attendance_count,
+                "time": item.attendance_time.strftime("%Y-%m-%d"),
+                "absence": absence,
+                "ratio": absence / item.attendance_count
+            })
+        return {"data": records, "has_next_page": has_next_page}
+
     def __repr__(self):
         return '<Teacher %r>' % self.number
 
@@ -369,7 +386,6 @@ class AttendanceRecord(db.Model):
 class AbsenceRecord(db.Model):
     __tablename__ = 'absence_record'
 
-
     id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
     established_course_id = db.Column(db.String(36),
                                       db.ForeignKey('established_course.id', ondelete='CASCADE', onupdate='CASCADE'))
@@ -377,7 +393,6 @@ class AbsenceRecord(db.Model):
                                      db.ForeignKey('attendance_record.id', ondelete='CASCADE', onupdate='CASCADE'))
     absence_type = db.Column(db.String(10))
     student_id = db.Column(db.String(36), db.ForeignKey('student.number', ondelete='CASCADE', onupdate='CASCADE'))
-
 
     def __init__(self, established_course_id, attendance_record_id, absence_type, student_id):
         self.established_course_id = established_course_id

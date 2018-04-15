@@ -1,6 +1,6 @@
 from app.modules.teacher import teacher
 
-from flask import session
+from flask import session, request
 import json
 from app.models import Teacher, AttendanceRecord
 
@@ -33,7 +33,16 @@ def get_courses():
             "course_place": esc.class_room,
             "kaoqin_count": AttendanceRecord.query.filter(AttendanceRecord.established_course_id == esc.id).count(),
             "course": course,
-            "esc_id":esc.id,
+            "esc_id": esc.id,
             "course_time": course_time_
         })
     return json.dumps(res)
+
+
+@teacher.route("/get_attence_record")
+def get_attence_record():
+    session["user_number"] = '1290'
+    tea = Teacher(session['user_number'])
+    e_course_id = request.args.get("e_course_id")
+    cur_page = int(request.args.get("page"))
+    return json.dumps(tea.get_attence_record(e_course_id, cur_page))
