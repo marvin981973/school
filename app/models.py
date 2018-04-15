@@ -369,6 +369,7 @@ class AttendanceRecord(db.Model):
 class AbsenceRecord(db.Model):
     __tablename__ = 'absence_record'
 
+
     id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
     established_course_id = db.Column(db.String(36),
                                       db.ForeignKey('established_course.id', ondelete='CASCADE', onupdate='CASCADE'))
