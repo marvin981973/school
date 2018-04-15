@@ -46,3 +46,20 @@ def get_attence_record():
     e_course_id = request.args.get("e_course_id")
     cur_page = int(request.args.get("page"))
     return json.dumps(tea.get_attence_record(e_course_id, cur_page))
+
+
+@teacher.route("/get_absence_stu")
+def get_absence_stu():
+    session["user_number"] = '1290'
+    tea = Teacher(session['user_number'])
+    attendance_id = request.args.get("attendance_id")
+    return json.dumps(tea.get_absence_stu(attendance_id))
+
+
+@teacher.route("/modify_absence")
+def modify_absence():
+    session["user_number"] = '1290'
+    tea = Teacher(session['user_number'])
+    absence_id = request.args.get("absence_id")
+    modify_type = request.args.get("type")
+    return json.dumps(tea.modify_absence(absence_id,modify_type))

@@ -76,6 +76,7 @@ class Student(db.Model):
     head_url = db.Column(db.String(50))
     telephone = db.Column(db.String(11))
     mail = db.Column(db.String(50))
+    absence_records = db.relationship('AbsenceRecord', backref='student', lazy='dynamic')
 
     def __init__(self, number):
         self.number = number
@@ -169,6 +170,36 @@ class Teacher(db.Model):
                 "ratio": absence / item.attendance_count
             })
         return {"data": records, "has_next_page": has_next_page}
+
+    def get_absence_stu(self, attendance_id):
+        items = AbsenceRecord.query.filter(AbsenceRecord.attendance_record_id == attendance_id).all()
+        absences = []
+        for item in items:
+            absences.append({
+                "id": item.id,
+                "student_id": item.student_id,
+                "absence_type": int(item.absence_type),
+                "stu_head": item.student.head_url,
+                "stu_name": item.student.name,
+                "stu_class_name": item.student.classes.name,
+                "absence_count": AbsenceRecord.query.filter(AbsenceRecord.student_id == item.student_id,
+                                                            AbsenceRecord.established_course_id == item.established_course_id,
+                                                            AbsenceRecord.absence_type == '0').count(),
+
+            })
+        return {"data": absences}
+
+    def modify_absence(self, absence_id, modify_type):
+        try:
+            absence = AbsenceRecord.query.filter(AbsenceRecord.id == absence_id).first()
+            if modify_type == '3':
+                db.session.delete(absence)
+            else:
+                absence.absence_type = modify_type
+            db.session.commit()
+            return {"code": 1}
+        except:
+            return {"code": -1}
 
     def __repr__(self):
         return '<Teacher %r>' % self.number
