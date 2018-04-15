@@ -354,6 +354,7 @@ class AttendanceRecord(db.Model):
     attendance_type = db.Column(db.String(10))
     attendance_count = db.Column(db.Integer)
     attendance_time = db.Column(db.DateTime, nullable=False, default=datetime.now())
+    absences = db.relationship('AbsenceRecord', backref='attendance', lazy='dynamic')
 
     def __init__(self, established_course_id, attendance_type, attendance_count):
         self.established_course_id = established_course_id
@@ -375,6 +376,7 @@ class AbsenceRecord(db.Model):
                                      db.ForeignKey('attendance_record.id', ondelete='CASCADE', onupdate='CASCADE'))
     absence_type = db.Column(db.String(10))
     student_id = db.Column(db.String(36), db.ForeignKey('student.number', ondelete='CASCADE', onupdate='CASCADE'))
+
 
     def __init__(self, established_course_id, attendance_record_id, absence_type, student_id):
         self.established_course_id = established_course_id
