@@ -5,14 +5,12 @@ import json
 import uuid
 from datetime import datetime
 
-
 app = Flask(__name__)
 config_name = 'dev'
 app.config.from_object(config[config_name])
 config[config_name].init_app(app)
 
 db = SQLAlchemy(app)
-
 
 
 # 学院表
@@ -72,31 +70,6 @@ class Student(db.Model):
     def __init__(self, number):
         self.number = number
 
-    # 获取课程表
-    def get_class_table(self):
-        xn_xq = getXNXQ()
-        courses = SelectedCourse.query.filter(SelectedCourse.student_id == self.number,
-                                              SelectedCourse.school_year == xn_xq).all()
-        res = []
-        for cour in courses:
-            established_course = EstablishedCourse.query.filter(
-                EstablishedCourse.id == cour.established_course_id).first()
-            teacher = established_course.teacher.name
-            course = established_course.course.name
-            class_time = established_course.class_time
-            class_time_details = class_time.split(';')
-            for index in class_time_details:
-                c = {
-                    "established_course_id": established_course.id,
-                    "class_time": 'c_' + index[:1] + '_' + index[-1:],
-                    "class_room": established_course.class_room,
-                    "teacher": teacher,
-                    "course": course
-                }
-                res.append(c)
-
-        return res
-
     def __repr__(self):
         return '<Student %r>' % self.number
 
@@ -120,31 +93,6 @@ class Teacher(db.Model):
     def __init__(self, number):
         self.number = number
 
-    # 获得课程
-    def get_class(self):
-        courses = EstablishedCourse.query.filter(EstablishedCourse.teacher_id == self.number,
-                                                 EstablishedCourse.school_year == getXNXQ()).all()
-        return courses
-
-    # 获取课程表
-    def get_class_table(self):
-        res = []
-        established_course = self.get_class()
-        for esc in established_course:
-            course = esc.course.name
-            class_time = esc.class_time
-            class_time_details = class_time.split(';')
-            for index in class_time_details:
-                c = {
-                    "established_course_id": esc.id,
-                    "class_time": 'c_' + index[:1] + '_' + index[-1:],
-                    "class_room": esc.class_room,
-                    "teacher": self.name,
-                    "course": course
-                }
-                res.append(c)
-        return res
-
     def __repr__(self):
         return '<Teacher %r>' % self.number
 
@@ -164,32 +112,6 @@ class UserBind(db.Model):
         self.openid = openid
         self.number = number
         self.identity_type = identity_type
-
-    @staticmethod
-    def check_bind(open_id):
-        bind = UserBind.query.filter_by(openid=open_id).first()
-        if bind:
-            return json.dumps({'code': '1', 'msg': '', 'user_type': bind.identity_type})
-        return json.dumps({'code': '0', 'msg': ''})
-
-    def __validate_user(self):
-        if self.query.filter_by(openid=self.openid).first():
-            raise DataConflictException(u'用户已绑定')
-
-        if self.identity_type == 's' and Student.query.filter(Student.number == self.number).first() == None:
-            raise DataConflictException(u'学生账号不存在')
-
-        if self.identity_type == 't' and Teacher.query.filter(Teacher.number == self.number).first() == None:
-            raise DataConflictException(u'教师账号不存在')
-
-    def bind(self):
-        try:
-            self.__validate_user()
-            db.session.add(self)
-            db.session.commit()
-            return {'code': '1', 'msg': u'绑定成功'}
-        except DataConflictException as e:
-            return {'code': '-1', 'msg': str(e)}
 
     def __repr__(self):
         return '<UserBind %r>' % self.openid
@@ -466,7 +388,6 @@ class SchoolScenery(db.Model):
 
     def __repr__(self):
         return '<SchoolScenery %r>' % self.description
-
 
 
 def reset():
