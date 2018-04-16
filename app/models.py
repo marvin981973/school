@@ -5,6 +5,7 @@ from datetime import datetime
 from app import db
 
 from app.tools.CustomException import DataConflictException
+from app.tools import get_random
 
 
 def getXNXQ():
@@ -77,6 +78,7 @@ class Student(db.Model):
     telephone = db.Column(db.String(11))
     mail = db.Column(db.String(50))
     absence_records = db.relationship('AbsenceRecord', backref='student', lazy='dynamic')
+    selected_courses = db.relationship('SelectedCourse', backref='student', lazy='dynamic')
 
     def __init__(self, number):
         self.number = number
@@ -154,8 +156,10 @@ class Teacher(db.Model):
                 res.append(c)
         return res
 
+    # 获取考勤记录
     def get_attence_record(self, e_course_id, cur_page):
-        pagination = AttendanceRecord.query.filter(AttendanceRecord.established_course_id == e_course_id).paginate(
+        pagination = AttendanceRecord.query.filter(AttendanceRecord.established_course_id == e_course_id).order_by(
+            AttendanceRecord.attendance_time.desc()).paginate(
             cur_page, 10, False)
         has_next_page = (False if pagination.page == pagination.pages else True)
         records = []
@@ -171,6 +175,7 @@ class Teacher(db.Model):
             })
         return {"data": records, "has_next_page": has_next_page}
 
+    # 获取缺勤学生
     def get_absence_stu(self, attendance_id):
         items = AbsenceRecord.query.filter(AbsenceRecord.attendance_record_id == attendance_id).all()
         absences = []
@@ -189,6 +194,7 @@ class Teacher(db.Model):
             })
         return {"data": absences}
 
+    # 修改缺勤学生信息
     def modify_absence(self, absence_id, modify_type):
         try:
             absence = AbsenceRecord.query.filter(AbsenceRecord.id == absence_id).first()
@@ -199,6 +205,48 @@ class Teacher(db.Model):
             db.session.commit()
             return {"code": 1}
         except:
+            return {"code": -1}
+
+    # 获取课程人数
+    def get_student_count(self, e_course_id):
+        return {"count": SelectedCourse.query.filter(SelectedCourse.established_course_id == e_course_id).count()}
+
+    # 获取点名列表
+    def get_attendance_members(self, e_course_id, attendance_type, attendance_count):
+        students = SelectedCourse.query.filter(SelectedCourse.established_course_id == e_course_id).all()
+        students_count = len(students)
+        if attendance_type == '0':  # 随机
+            out = get_random(attendance_count if attendance_count < students_count else students_count, students_count)
+        else:
+            out = [i for i in range(students_count)]
+        data = []
+        for i in out:
+            stu = students[i].student
+            data.append({
+                "stu_id": stu.number,
+                "name": stu.name,
+                "c_name": stu.classes.name,
+                "head_url": stu.head_url
+            })
+        return {"stu": data}
+
+    # 保存点名记录
+    def save_attendance(self, data):
+        attendance = AttendanceRecord(data["established_course_id"], data["attendance_type"],
+                                      data["attendance_count"])
+        id = str(uuid.uuid1())
+        attendance.id = id
+        try:
+            attendance.save()
+            for stu in data["absences"]:
+                s = AbsenceRecord(data["established_course_id"], id, stu["absence_type"], stu["stu_id"])
+                s.id = str(uuid.uuid1())
+                db.session.add(s)
+            db.session.commit()
+            return {"code": 1}
+        except:
+            db.session.delete(attendance)
+            db.session.commit()
             return {"code": -1}
 
     def __repr__(self):
@@ -408,6 +456,10 @@ class AttendanceRecord(db.Model):
         self.established_course_id = established_course_id
         self.attendance_type = attendance_type
         self.attendance_count = attendance_count
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
 
     def __repr__(self):
         return '<AttendanceRecord %r>' % self.id

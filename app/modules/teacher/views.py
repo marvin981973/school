@@ -62,4 +62,30 @@ def modify_absence():
     tea = Teacher(session['user_number'])
     absence_id = request.args.get("absence_id")
     modify_type = request.args.get("type")
-    return json.dumps(tea.modify_absence(absence_id,modify_type))
+    return json.dumps(tea.modify_absence(absence_id, modify_type))
+
+
+@teacher.route("/get_student_count")
+def get_student_count():
+    session["user_number"] = '1290'
+    tea = Teacher(session['user_number'])
+    e_course_id = request.args.get("e_course_id")
+    return json.dumps(tea.get_student_count(e_course_id))
+
+
+@teacher.route("/get_attendance_members")
+def get_attendance_members():
+    session["user_number"] = '1290'
+    tea = Teacher(session['user_number'])
+    e_course_id = request.args.get("e_course_id")
+    attendance_type = request.args.get("type")
+    attendance_count = request.args.get("attendance_count")
+    return json.dumps(tea.get_attendance_members(e_course_id, attendance_type, int(attendance_count)))
+
+
+@teacher.route("/save_attendance", methods=["POST"])
+def save_attendance():
+    session["user_number"] = '1290'
+    tea = Teacher(session['user_number'])
+    data = json.loads(request.data.decode())
+    return json.dumps(tea.save_attendance(data))
