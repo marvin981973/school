@@ -249,6 +249,19 @@ class Teacher(db.Model):
             db.session.commit()
             return {"code": -1}
 
+    # 平时分评定
+    def set_performance_score(self, e_course_id, stu, dailygrade):
+        students = SelectedCourse.query.filter(SelectedCourse.established_course_id == e_course_id,
+                                               SelectedCourse.student_id.in_(stu))
+        try:
+            for student in students:
+                student.performance_score = dailygrade
+                db.session.add(student)
+            db.session.commit()
+            return {"code": 1}
+        except:
+            return {"code": -1}
+
     def __repr__(self):
         return '<Teacher %r>' % self.number
 
