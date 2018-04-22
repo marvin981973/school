@@ -345,6 +345,9 @@ class EstablishedCourse(db.Model):
     class_period = db.Column(db.Integer)
     teacher_id = db.Column(db.String(36), db.ForeignKey('teacher.number', ondelete='CASCADE', onupdate='CASCADE'))
     school_year = db.Column(db.String(15))
+    auto_calculate_daily_grade = db.Column(db.Boolean, nullable=False, default=True)
+    absence_minus_pt = db.Column(db.Integer, nullable=False, default=1)
+    homework_minus_pt = db.Column(db.Integer, nullable=False, default=1)
 
     def __init__(self, course_id, capacity, class_time, class_room, class_period, teacher_id, school_year):
         self.course_id = course_id
@@ -355,8 +358,37 @@ class EstablishedCourse(db.Model):
         self.teacher_id = teacher_id
         self.school_year = school_year
 
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
     def __repr__(self):
         return '<EstablishedCourse %r>' % self.id
+
+
+# 课程通知表
+class EstablishedCourseNotification(db.Model):
+    __tablename__ = 'established_course_notification'
+
+    id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
+    established_course_id = db.Column(db.String(36),
+                                      db.ForeignKey('established_course.id', ondelete='CASCADE', onupdate='CASCADE'))
+    create_time = db.Column(db.DateTime, nullable=False, default=datetime.now())
+    noti_title = db.Column(db.String(100))
+    noti_content = db.Column(db.Text)
+    read_count = db.Column(db.Integer, nullable=False, default=0)
+
+    def __init__(self, established_course_id, noti_title, noti_content):
+        self.established_course_id = established_course_id
+        self.noti_title = noti_title
+        self.noti_content = noti_content
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def __repr__(self):
+        return '<EstablishedCourseNotification %r>' % self.id
 
 
 # 选课表
@@ -367,93 +399,97 @@ class SelectedCourse(db.Model):
     established_course_id = db.Column(db.String(36),
                                       db.ForeignKey('established_course.id', ondelete='CASCADE', onupdate='CASCADE'))
     student_id = db.Column(db.String(36), db.ForeignKey('student.number', ondelete='CASCADE', onupdate='CASCADE'))
-    performance_score = db.Column(db.Float, nullable=False, default=100)
+    performance_score = db.Column(db.Integer, nullable=False, default=100)
     school_year = db.Column(db.String(15))
+    final_grade = db.Column(db.Float)
 
     def __repr__(self):
         return '<SelectedCourse %r>' % self.id
 
 
-# 题库表
-class QuestionBank(db.Model):
-    __tablename__ = 'question_bank'
-
-    id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
-    description = db.Column(db.Text)
-    answer = db.Column(db.String(36))
-    score = db.Column(db.Float)
-    course_id = db.Column(db.String(36), db.ForeignKey('course.id', ondelete='CASCADE', onupdate='CASCADE'))
-    category = db.Column(db.String(10))
-    add_time = db.Column(db.DateTime, nullable=False, default=datetime.now())
-
-    def __repr__(self):
-        return '<QuestionBank %r>' % self.id
-
-
-# 作业表
-class HomeWork(db.Model):
-    __tablename__ = 'homework'
-
-    id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
-    established_course_id = db.Column(db.String(36),
-                                      db.ForeignKey('established_course.id', ondelete='CASCADE', onupdate='CASCADE'))
-    course_id = db.Column(db.String(36), db.ForeignKey('course.id', ondelete='CASCADE', onupdate='CASCADE'))
-    start_time = db.Column(db.DateTime, nullable=False, default=datetime.now())
-    end_time = db.Column(db.DateTime, nullable=False)
-    questions_count = db.Column(db.Integer)
-    questions = db.Column(db.Text)
-
-    def __init__(self, established_course_id, course_id, questions_count, questions, **other):
-        self.established_course_id = established_course_id
-        self.course_id = course_id
-        self.questions_count = questions_count
-        self.questions = questions
-        self.start_time = other.get('start_time')
-
-    def __repr__(self):
-        return '<HomeWork %r>' % self.id
-
-
-# 作业提交表
-class HomeWorkSubmit(db.Model):
-    __tablename__ = 'homework_submit'
-
-    id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
-    homework_id = db.Column(db.String(36), db.ForeignKey('homework.id', ondelete='CASCADE', onupdate='CASCADE'))
-    student_id = db.Column(db.String(36), db.ForeignKey('student.number', ondelete='CASCADE', onupdate='CASCADE'))
-    submit_time = db.Column(db.DateTime, nullable=False, default=datetime.now())
-    answer_list = db.relationship('HomeWorkSubmitAnswer', backref='homework_submit', lazy='dynamic')
-
-    def __init__(self, homework_id, student_id):
-        self.homework_id = homework_id
-        self.student_id = student_id
-
-    def __repr__(self):
-        return '<HomeWorkSubmit %r>' % self.id
-
-
-# 作业提交答案表
-class HomeWorkSubmitAnswer(db.Model):
-    __tablename__ = 'homework_submit_answer'
-
-    id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
-    homework_id = db.Column(db.String(36), db.ForeignKey('homework.id', ondelete='CASCADE', onupdate='CASCADE'))
-    homework_submit_id = db.Column(db.String(36),
-                                   db.ForeignKey('homework_submit.id', ondelete='CASCADE', onupdate='CASCADE'))
-    question_id = db.Column(db.String(36), db.ForeignKey('question_bank.id', ondelete='CASCADE', onupdate='CASCADE'))
-    answer = db.Column(db.Text)
-
-    def __init__(self, homework_id, homework_submit_id, question_id, **other):
-        self.homework_id = homework_id
-        self.homework_submit_id = homework_submit_id
-        self.question_id = question_id
-        self.answer = other.get('answer')
-
-    def __repr__(self):
-        return '<HomeWorkSubmitAnswer %r>' % self.id
+#
+# # 题库表
+# class QuestionBank(db.Model):
+#     __tablename__ = 'question_bank'
+#
+#     id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
+#     description = db.Column(db.Text)
+#     answer = db.Column(db.String(36))
+#     score = db.Column(db.Float)
+#     course_id = db.Column(db.String(36), db.ForeignKey('course.id', ondelete='CASCADE', onupdate='CASCADE'))
+#     category = db.Column(db.String(10))
+#     add_time = db.Column(db.DateTime, nullable=False, default=datetime.now())
+#
+#     def __repr__(self):
+#         return '<QuestionBank %r>' % self.id
+#
+#
+# # 作业表
+# class HomeWork(db.Model):
+#     __tablename__ = 'homework'
+#
+#     id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
+#     established_course_id = db.Column(db.String(36),
+#                                       db.ForeignKey('established_course.id', ondelete='CASCADE', onupdate='CASCADE'))
+#     course_id = db.Column(db.String(36), db.ForeignKey('course.id', ondelete='CASCADE', onupdate='CASCADE'))
+#     start_time = db.Column(db.DateTime, nullable=False, default=datetime.now())
+#     end_time = db.Column(db.DateTime, nullable=False)
+#     questions_count = db.Column(db.Integer)
+#     questions = db.Column(db.Text)
+#
+#     def __init__(self, established_course_id, course_id, questions_count, questions, **other):
+#         self.established_course_id = established_course_id
+#         self.course_id = course_id
+#         self.questions_count = questions_count
+#         self.questions = questions
+#         self.start_time = other.get('start_time')
+#
+#     def __repr__(self):
+#         return '<HomeWork %r>' % self.id
+#
+#
+# # 作业提交表
+# class HomeWorkSubmit(db.Model):
+#     __tablename__ = 'homework_submit'
+#
+#     id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
+#     homework_id = db.Column(db.String(36), db.ForeignKey('homework.id', ondelete='CASCADE', onupdate='CASCADE'))
+#     student_id = db.Column(db.String(36), db.ForeignKey('student.number', ondelete='CASCADE', onupdate='CASCADE'))
+#     submit_time = db.Column(db.DateTime, nullable=False, default=datetime.now())
+#     answer_list = db.relationship('HomeWorkSubmitAnswer', backref='homework_submit', lazy='dynamic')
+#
+#     def __init__(self, homework_id, student_id):
+#         self.homework_id = homework_id
+#         self.student_id = student_id
+#
+#     def __repr__(self):
+#         return '<HomeWorkSubmit %r>' % self.id
+#
+#
+# # 作业提交答案表
+# class HomeWorkSubmitAnswer(db.Model):
+#     __tablename__ = 'homework_submit_answer'
+#
+#     id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
+#     homework_id = db.Column(db.String(36), db.ForeignKey('homework.id', ondelete='CASCADE', onupdate='CASCADE'))
+#     homework_submit_id = db.Column(db.String(36),
+#                                    db.ForeignKey('homework_submit.id', ondelete='CASCADE', onupdate='CASCADE'))
+#     question_id = db.Column(db.String(36), db.ForeignKey('question_bank.id', ondelete='CASCADE', onupdate='CASCADE'))
+#     answer = db.Column(db.Text)
+#
+#     def __init__(self, homework_id, homework_submit_id, question_id, **other):
+#         self.homework_id = homework_id
+#         self.homework_submit_id = homework_submit_id
+#         self.question_id = question_id
+#         self.answer = other.get('answer')
+#
+#     def __repr__(self):
+#         return '<HomeWorkSubmitAnswer %r>' % self.id
 
 
 # 考勤记录
+
+
 class AttendanceRecord(db.Model):
     __tablename__ = 'attendance_record'
 

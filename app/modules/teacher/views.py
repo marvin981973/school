@@ -1,8 +1,9 @@
+from app import db
 from app.modules.teacher import teacher
 
 from flask import session, request
 import json
-from app.models import Teacher, AttendanceRecord
+from app.models import Teacher, AttendanceRecord, EstablishedCourse, SelectedCourse, EstablishedCourseNotification
 
 
 @teacher.route("/")
@@ -89,8 +90,92 @@ def save_attendance():
     return json.dumps(tea.save_attendance(data))
 
 
+@teacher.route("/get_dailygrade_setting")
+def get_dailygrade_setting():
+    e_course_id = request.args.get("e_course_id")
+    e_course = EstablishedCourse.query.filter(EstablishedCourse.id == e_course_id).first()
+    return json.dumps({
+        "auto": e_course.auto_calculate_daily_grade,
+        "queqin": e_course.absence_minus_pt,
+        "zuoye": e_course.homework_minus_pt
+    })
+
+
+@teacher.route("/modify_dailygrade_setting")
+def modify_dailygrade_setting():
+    e_course_id = request.args.get("e_course_id")
+    e_course = EstablishedCourse.query.filter(EstablishedCourse.id == e_course_id).first()
+    e_course.auto_calculate_daily_grade = "true" == request.args.get("switch_checked")
+    e_course.absence_minus_pt = int(request.args.get("queqin_value"))
+    e_course.homework_minus_pt = int(request.args.get("zuoye_value"))
+    e_course.save()
+    return json.dumps({"code": 1})
+
+
+@teacher.route("/get_students")
+def get_students():
+    e_course_id = request.args.get("e_course_id")
+    students = SelectedCourse.query.filter(SelectedCourse.established_course_id == e_course_id).all()
+    res = [{
+        "name": stu.student.name,
+        "head": stu.student.head_url,
+        "c_name": stu.student.classes.name,
+        "stu_id": stu.student_id,
+        "f_grade": stu.final_grade,
+        "p_grade": stu.performance_score
+    } for stu in students]
+    return json.dumps(res)
+
+
 @teacher.route("/set_performance_score", methods=["POST"])
 def set_performance_score():
     tea = init_teacher()
     data = json.loads(request.data.decode())
     return json.dumps(tea.set_performance_score(data["e_course_id"], data["stu"], int(data["dailygrade"])))
+
+
+@teacher.route("/load_e_course_nitification")
+def load_e_course_nitification():
+    e_course_id = request.args.get("e_course_id")
+    notifications = EstablishedCourseNotification.query.filter(
+        EstablishedCourseNotification.established_course_id == e_course_id).order_by(
+        db.desc(EstablishedCourseNotification.create_time)).all()
+    res = [{
+        "id": noti.id,
+        "noti_title": noti.noti_title,
+        "create_time": noti.create_time.strftime("%Y-%m-%d"),
+        "read_count": noti.read_count
+    } for noti in notifications]
+    return json.dumps(res)
+
+
+@teacher.route("/delete_noti")
+def delete_noti():
+    id = request.args.get("id")
+    notifications = EstablishedCourseNotification.query.filter(
+        EstablishedCourseNotification.id == id).first()
+    db.session.delete(notifications)
+    db.session.commit()
+    return json.dumps({"code": 1})
+
+
+@teacher.route("/load_noti_content")
+def load_noti_content():
+    id = request.args.get("id")
+    notifications = EstablishedCourseNotification.query.filter(
+        EstablishedCourseNotification.id == id).first()
+    notifications.read_count += 1
+    db.session.add(notifications)
+    db.session.commit()
+    return json.dumps(
+        {"code": 1, "title": notifications.noti_title, "time": notifications.create_time.strftime("%Y-%m-%d"),
+         "content": notifications.noti_content}) if notifications else json.dumps({"code": -1})
+
+
+@teacher.route("/add_noti",methods=["POST"])
+def add_noti():
+    data = json.loads(request.data.decode())
+    notification = EstablishedCourseNotification(data["e_course_id"], data["form"]["title"], data["form"]["content"])
+    db.session.add(notification)
+    db.session.commit()
+    return json.dumps({"code": 1})
