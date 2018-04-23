@@ -189,7 +189,7 @@ class Teacher(db.Model):
                 "stu_class_name": item.student.classes.name,
                 "absence_count": AbsenceRecord.query.filter(AbsenceRecord.student_id == item.student_id,
                                                             AbsenceRecord.established_course_id == item.established_course_id,
-                                                            AbsenceRecord.absence_type == '0').count(),
+                                                            AbsenceRecord.absence_type == '2').count(),
 
             })
         return {"data": absences}
@@ -232,6 +232,9 @@ class Teacher(db.Model):
 
     # 保存点名记录
     def save_attendance(self, data):
+        e_course = EstablishedCourse.query.filter(EstablishedCourse.id == data["established_course_id"]).first()
+        auto_calculate_daily_grade = e_course.auto_calculate_daily_grade
+        absence_minus_pt = e_course.absence_minus_pt
         attendance = AttendanceRecord(data["established_course_id"], data["attendance_type"],
                                       data["attendance_count"])
         id = str(uuid.uuid1())
@@ -242,6 +245,12 @@ class Teacher(db.Model):
                 s = AbsenceRecord(data["established_course_id"], id, stu["absence_type"], stu["stu_id"])
                 s.id = str(uuid.uuid1())
                 db.session.add(s)
+                if auto_calculate_daily_grade:
+                    select = SelectedCourse.query.filter(
+                        SelectedCourse.established_course_id == data["established_course_id"],
+                        SelectedCourse.student_id == stu["stu_id"]).first()
+                    select.performance_score -= absence_minus_pt
+                    db.session.add(select)
             db.session.commit()
             return {"code": 1}
         except:
@@ -485,6 +494,7 @@ class SelectedCourse(db.Model):
 #
 #     def __repr__(self):
 #         return '<HomeWorkSubmitAnswer %r>' % self.id
+#
 
 
 # 考勤记录
@@ -498,7 +508,7 @@ class AttendanceRecord(db.Model):
                                       db.ForeignKey('established_course.id', ondelete='CASCADE', onupdate='CASCADE'))
     attendance_type = db.Column(db.String(10))
     attendance_count = db.Column(db.Integer)
-    attendance_time = db.Column(db.DateTime, nullable=False, default=datetime.now())
+    attendance_time = db.Column(db.DateTime, nullable=False, default=datetime.now)
     absences = db.relationship('AbsenceRecord', backref='attendance', lazy='dynamic')
 
     def __init__(self, established_course_id, attendance_type, attendance_count):
@@ -541,14 +551,18 @@ class LostFound(db.Model):
     __tablename__ = 'lost_found'
 
     id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
-    add_time = db.Column(db.DateTime, nullable=False, default=datetime.now())
+    add_time = db.Column(db.DateTime, nullable=False, default=datetime.now)
     publisher = db.Column(db.String(30))
+    publisher_name = db.Column(db.String(30))
+    title = db.Column(db.String(30))
     description = db.Column(db.Text)
     img_url = db.Column(db.String(50))
     status = db.Column(db.String(5), nullable=False, default='0')
 
-    def __init__(self, publisher, description, img_url):
+    def __init__(self, publisher, publisher_name,title, description, img_url):
         self.publisher = publisher
+        self.title = title
+        self.publisher_name = publisher_name
         self.description = description
         self.img_url = img_url
 

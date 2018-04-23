@@ -18,10 +18,12 @@ def create_app():
     from app.modules.student import student
     from app.modules.library import library
     from app.modules.upload import upload
+    from app.modules.lostandfound import lostandfound
     app.register_blueprint(public, url_prefix='')
     app.register_blueprint(webscrapy, url_prefix='/web')
     app.register_blueprint(teacher, url_prefix='/teacher')
     app.register_blueprint(student, url_prefix='/student')
     app.register_blueprint(library, url_prefix='/library')
     app.register_blueprint(upload, url_prefix='/upload')
+    app.register_blueprint(lostandfound, url_prefix='/lostandfound')
     return app
