@@ -12,7 +12,7 @@ def say_hello():
 
 
 def init_teacher():
-    session['user_number'] = '1290'
+    # session['user_number'] = '1290'
     return Teacher(session["user_number"])
 
 

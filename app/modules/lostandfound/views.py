@@ -43,7 +43,6 @@ def load_list():
 
 @lostandfound.route("/load_mylost")
 def load_mylost():
-    session['user_number'] = "149074064"
     items = LostFound.query.filter(LostFound.publisher == session["user_number"]).order_by(
         db.desc(LostFound.add_time)).all()
     data = []
@@ -92,8 +91,6 @@ def upload():
 
 @lostandfound.route("/add_lost", methods=["POST"])
 def add_lost():
-    session["user_number"] = "149074064"
-    session["user_type"] = "s"
     data = json.loads(request.data.decode())
     publisher = session["user_number"]
     publisher_name = Student.query.filter(Student.number == publisher).first().name if session[
