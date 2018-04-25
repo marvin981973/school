@@ -54,6 +54,17 @@ def bind_user():
         return json.dumps({'code': '0', 'msg': '绑定失败'})
 
 
+@public.route('/unbind_user')
+def unbind_user():
+    try:
+        user = UserBind.query.filter(UserBind.number == session["user_number"]).first()
+        db.session.delete(user)
+        db.session.commit()
+        return json.dumps({"code": 1})
+    except:
+        return json.dumps({"code": -1})
+
+
 @public.route('/get_user_type')
 def get_user_type():
     return json.dumps({"user_type": session["user_type"]})
