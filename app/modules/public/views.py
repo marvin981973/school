@@ -2,6 +2,7 @@ import os
 import uuid
 
 import datetime
+from lxml import etree
 
 from app import db
 from app.modules.public import public
@@ -154,3 +155,27 @@ def save_user_info():
         return json.dumps({"code": 1})
     except:
         return json.dumps({"code": -1})
+
+
+@public.route("/get_school_calendar")
+def get_school_calendar():
+    base_url = "http://jwc.ahut.edu.cn"
+    static_url = base_url + '/list.jsp?urltype=tree.TreeTempUrl&wbtreeid=1109'
+    html = ScrapyPage(static_url)
+    selector = etree.HTML(html)
+    calendars = selector.xpath("//a[@class='c44456']")
+    data = []
+    for calendar in calendars:
+        selectot_cal = etree.HTML(ScrapyPage(base_url + calendar.xpath("./@href")[0].strip()))
+        images = []
+        for cal in selectot_cal.xpath("//div[@id='vsb_content']/p"):
+            images.append(base_url + "/" + cal.xpath("./img/@src")[0])
+        data.append({
+            "name": calendar.xpath("./@title")[0].strip(),
+            "images": images
+        })
+    return json.dumps({"data": data})
+
+
+if __name__ == "__main__":
+    get_school_calendar()
