@@ -68,6 +68,7 @@ class Student(db.Model):
 
     number = db.Column(db.String(10), primary_key=True)
     name = db.Column(db.String(20))
+    signature = db.Column(db.String(50))
     age = db.Column(db.Integer)
     sex = db.Column(db.String(1))
     entrance_year = db.Column(db.Integer)
@@ -118,6 +119,7 @@ class Teacher(db.Model):
 
     number = db.Column(db.String(10), primary_key=True)
     name = db.Column(db.String(20))
+    signature = db.Column(db.String(50))
     age = db.Column(db.Integer)
     sex = db.Column(db.String(1))
     college_id = db.Column(db.String(36), db.ForeignKey('college.id', ondelete='CASCADE', onupdate='CASCADE'))
@@ -559,7 +561,7 @@ class LostFound(db.Model):
     img_url = db.Column(db.String(50))
     status = db.Column(db.String(5), nullable=False, default='0')
 
-    def __init__(self, publisher, publisher_name,title, description, img_url):
+    def __init__(self, publisher, publisher_name, title, description, img_url):
         self.publisher = publisher
         self.title = title
         self.publisher_name = publisher_name

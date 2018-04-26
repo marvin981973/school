@@ -1,3 +1,9 @@
+import os
+import uuid
+
+import datetime
+
+from app import db
 from app.modules.public import public
 
 import json
@@ -9,7 +15,7 @@ from app.modules.weather.weather import Weather
 from app.config import wx_config
 
 from app.tools.WebPageParsing import ScrapyPage
-from app.models import UserBind, SchoolScenery
+from app.models import UserBind, SchoolScenery, Teacher, Student
 
 
 @public.route('/')
@@ -89,3 +95,62 @@ def school_scenery():
             "description": item.description
         })
     return json.dumps({"has_next_page": has_next_page, "data": data})
+
+
+@public.route("/get_user_info")
+def get_user_info():
+    session["user_number"] = "149074064"
+    session["user_type"] = 's'
+    user = Teacher.query.filter(Teacher.number == session["user_number"]).first() if session[
+                                                                                         "user_type"] == 't' else Student.query.filter(
+        Student.number == session["user_number"]).first()
+    return json.dumps({
+        "img_url": user.head_url,
+        "name": user.name,
+        "signature": user.signature
+    }) if request.args.get("mode") == '0' else json.dumps({
+        "img_url": user.head_url,
+        "name": user.name,
+        "signature": user.signature,
+        "number": user.number,
+        "age": user.age,
+        "sex": user.sex,
+        "birth_day": user.birth_day.strftime("%Y-%m-%d"),
+
+    })
+
+
+@public.route("/upload_user_head", methods=["POST"])
+def upload_user_head():
+    path = os.path.abspath(os.path.join(os.getcwd(), './app/upload/user/images/'))
+    if not os.path.exists(path):
+        os.makedirs(path)
+    file = request.files["file"]
+    file_name = str(uuid.uuid1()) + "." + file.filename.split(".")[-1:][0]
+    file.save(path + "/" + file_name)
+    return json.dumps({"code": 1, "file_name": file_name})
+
+
+@public.route('/user_head/<image_id>')
+def user_head(image_id):
+    image = open('app/upload/user/images/{}'.format(image_id), 'rb')
+    return Response(image, mimetype='image/jpeg')
+
+
+@public.route("/save_user_info", methods=["POST"])
+def save_user_info():
+    try:
+        session["user_number"] = "149074064"
+        session["user_type"] = 's'
+        data = json.loads(request.data.decode())
+        user = Teacher.query.filter(Teacher.number == session["user_number"]).first() if session[
+                                                                                             "user_type"] == 't' else Student.query.filter(
+            Student.number == session["user_number"]).first()
+        user.head_url = data["img_url"]
+        user.birth_day = datetime.datetime.strptime(data["birth_day"], "%Y-%m-%d")
+        user.age = data["age"]
+        user.signature = data["signature"]
+        db.session.commit()
+        return json.dumps({"code": 1})
+    except:
+        return json.dumps({"code": -1})

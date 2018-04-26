@@ -83,9 +83,12 @@ def modify_lost():
 
 @lostandfound.route("/upload", methods=["POST"])
 def upload():
+    path = os.path.abspath(os.path.join(os.getcwd(), './app/upload/lostandfound/images/'))
+    if not os.path.exists(path):
+        os.makedirs(path)
     file = request.files["file"]
     file_name = str(uuid.uuid1()) + "." + file.filename.split(".")[-1:][0]
-    file.save("app/upload/lostandfound/images/" + file_name)
+    file.save(path + "/" + file_name)
     return json.dumps({"code": 1, "file_name": file_name})
 
 
@@ -100,3 +103,7 @@ def add_lost():
     db.session.add(lost)
     db.session.commit()
     return json.dumps({"code": 1})
+
+
+if __name__ == "__main__":
+    print(os.path.abspath(os.path.join(os.getcwd(), "..\..", './upload/lostandfound/images/')))
