@@ -1,8 +1,10 @@
+import uuid
+
 from app import db
-from app.models import SchoolDynamic, Student, Teacher
+from app.models import SchoolDynamic, Student, Teacher, Comment, Collection
 from app.modules.dynamic import dynamic
 import json
-from flask import request
+from flask import request, session
 from lxml import etree
 from app.tools.WebPageParsing import ScrapyPage
 
@@ -57,13 +59,10 @@ def get_news_content():
     return json.dumps({'content': content})
 
 
-@dynamic.route('/get_school_dynamic')
-def get_school_dynamic():
-    cur_page = int(request.args.get("page"))
-    pagination = SchoolDynamic.query.order_by(db.desc(SchoolDynamic.add_time)).paginate(cur_page, 20, False)
-    has_next_page = (False if pagination.page == pagination.pages else True)
+def format_dynamic(items):
+    session["user_number"] = '149074064'
     data = []
-    for item in pagination.items:
+    for item in items:
         imgs = item.imges.split("#")
         images = []
         index = 0
@@ -81,19 +80,103 @@ def get_school_dynamic():
         user = Student.query.filter(
             Student.number == item.publisher_number).first() if item.publisher_type == 's' else Teacher.query.filter(
             Teacher.number == item.publisher_number).first()
+        collection = Collection.query.filter(Collection.type == '0', Collection.collection_id == item.id,
+                                             Collection.collector == session["user_number"]).first()
+        heart_count = Collection.query.filter(Collection.collection_id == item.id).count()
         data.append({
             "id": item.id,
             "time": item.add_time.strftime("%Y-%m-%d %H:%M:%S"),
             "content": item.content,
-            "heart_count": item.heart_count,
+            "heart_count": heart_count,
             "publisher_number": item.publisher_number,
             "publisher_name": user.name,
             "head_url": user.head_url,
-            "content": item.content,
             "have_img": length,
-            "images": images
+            "images": images,
+            "comment_count": Comment.query.filter(Comment.parent_id == item.id,
+                                                  Comment.type == '0').count(),
+            "collection_id": collection.id if collection else ""
+        })
+    return data
+
+
+@dynamic.route('/get_school_dynamic')
+def get_school_dynamic():
+    cur_page = int(request.args.get("page"))
+    pagination = SchoolDynamic.query.order_by(db.desc(SchoolDynamic.add_time)).paginate(cur_page, 20, False)
+    has_next_page = (False if pagination.page == pagination.pages else True)
+    data = format_dynamic(pagination.items)
+
+    return json.dumps({"has_next_page": has_next_page, "data": data})
+
+
+@dynamic.route('/uncollect_school_dynamic')
+def uncollect_school_dynamic():
+    try:
+        collection = Collection.query.filter(Collection.id == request.args.get('collection_id')).first()
+        db.session.delete(collection)
+        db.session.commit()
+        return json.dumps({'code': 1})
+    except:
+        return json.dumps({"code": -1})
+
+
+@dynamic.route('/collect_school_dynamic')
+def collect_school_dynamic():
+    try:
+        session["user_number"] = '149074064'
+        session["user_type"] = 's'
+        collection = Collection(request.args.get("collection_id"), session["user_number"], session["user_type"], '0')
+        id = str(uuid.uuid1())
+        collection.id = id
+        db.session.add(collection)
+        db.session.commit()
+        return json.dumps({'code': 1, "id": id})
+    except:
+        return json.dumps({"code": -1})
+
+
+@dynamic.route('/load_dynamic_detail')
+def load_dynamic_detail():
+    dynamic = SchoolDynamic.query.filter(SchoolDynamic.id == request.args.get("id")).first()
+    return json.dumps({"data": format_dynamic([dynamic])})
+
+
+@dynamic.route('/load_comment')
+def load_comment():
+    cur_page = int(request.args.get("page"))
+    id = request.args.get("id")
+    pagination = Comment.query.filter(Comment.parent_id == id).order_by(db.desc(Comment.add_time)).paginate(cur_page,
+                                                                                                            10, False)
+    has_next_page = (False if pagination.page == pagination.pages else True)
+    data = []
+    for item in pagination.items:
+        commenter = Student.query.filter(
+            Student.number == item.commenter).first() if item.commenter_type == 's' else Teacher.query.filter(
+            Teacher.number == item.commenter).first()
+        data.append({
+            "head_url": commenter.head_url,
+            "commenter_name": commenter.name,
+            "time": item.add_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "comment": item.content
         })
     return json.dumps({"has_next_page": has_next_page, "data": data})
 
-    if __name__ == "__main__":
-        get_news_content()
+
+@dynamic.route('/comment', methods=['POST'])
+def comment():
+    try:
+        session["user_number"] = "149074064"
+        session["user_type"] = 's'
+        data = json.loads(request.data.decode())
+        comment = Comment(data["id"], session["user_number"], session["user_type"], data["comment"], '0')
+        comment.id = str(uuid.uuid1())
+        db.session.add(comment)
+        db.session.commit()
+        return json.dumps({'code': 1})
+    except:
+        return json.dumps({'code': -1})
+
+
+if __name__ == "__main__":
+    get_news_content()

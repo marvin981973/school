@@ -24,3 +24,12 @@ def create_app():
     app.register_blueprint(library, url_prefix='/library')
     app.register_blueprint(lostandfound, url_prefix='/lostandfound')
     return app
+
+
+def create_app_for_db():
+    app = Flask(__name__)
+    config_name = 'dev'
+    app.config.from_object(config[config_name])
+    config[config_name].init_app(app)
+    db.init_app(app)
+    return app
