@@ -566,9 +566,15 @@ class SchoolDynamic(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
     publisher_number = db.Column(db.String(20))
     publisher_type = db.Column(db.String(5))
-    add_time = db.Column(db.DateTime, nullable=False, default=datetime.now())
+    add_time = db.Column(db.DateTime, nullable=False, default=datetime.now)
     content = db.Column(db.Text)
     imges = db.Column(db.String(500))
+
+    def __init__(self, publisher_number, publisher_type, content, imges):
+        self.publisher_number = publisher_number
+        self.publisher_type = publisher_type
+        self.content = content
+        self.imges = imges
 
     def __repr__(self):
         return '<SchoolDynamic %r>' % self.id

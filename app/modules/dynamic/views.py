@@ -1,10 +1,12 @@
 import uuid
 
+import os
+
 from app import db
 from app.models import SchoolDynamic, Student, Teacher, Comment, Collection
 from app.modules.dynamic import dynamic
 import json
-from flask import request, session
+from flask import request, session, Response
 from lxml import etree
 from app.tools.WebPageParsing import ScrapyPage
 
@@ -109,6 +111,10 @@ def get_school_dynamic():
 
     return json.dumps({"has_next_page": has_next_page, "data": data})
 
+@dynamic.route('/images/<image_id>')
+def image(image_id):
+    image = open('app/upload/dynamic/images/{}'.format(image_id), 'rb')
+    return Response(image, mimetype='image/jpeg')
 
 @dynamic.route('/uncollect_school_dynamic')
 def uncollect_school_dynamic():
@@ -176,6 +182,42 @@ def comment():
         return json.dumps({'code': 1})
     except:
         return json.dumps({'code': -1})
+
+
+@dynamic.route('/add_school_dynamic', methods=['POST'])
+def add_school_dynamic():
+    try:
+        session["user_number"] = "149074064"
+        session["user_type"] = 's'
+        data = json.loads(request.data.decode())
+        images = ""
+        school_dynamic = SchoolDynamic(session["user_number"], session["user_type"], data["content"], images)
+        id = str(uuid.uuid1())
+        school_dynamic.id = id
+        db.session.add(school_dynamic)
+        db.session.commit()
+        return json.dumps({'code': 1, 'id': id})
+    except:
+        return json.dumps({'code': -1})
+
+
+@dynamic.route("/upload_dynamic_image", methods=["POST"])
+def upload_dynamic_image():
+    path = os.path.abspath(os.path.join(os.getcwd(), './app/upload/dynamic/images/'))
+    if not os.path.exists(path):
+        os.makedirs(path)
+    try:
+        file = request.files["file"]
+        file_name = str(uuid.uuid1()) + "." + file.filename.split(".")[-1:][0]
+        file.save(path + "/" + file_name)
+        id = request.form["id"]
+        school_dynamic = SchoolDynamic.query.filter(SchoolDynamic.id == id).first()
+        school_dynamic.imges += ("#" + file_name)
+        school_dynamic.imges = school_dynamic.imges.strip('#')
+        db.session.commit()
+        return json.dumps({"code": 1})
+    except:
+        return json.dumps({"code": -1})
 
 
 if __name__ == "__main__":
