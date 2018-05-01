@@ -100,8 +100,6 @@ def school_scenery():
 
 @public.route("/get_user_info")
 def get_user_info():
-    session["user_number"] = "149074064"
-    session["user_type"] = 's'
     user = Teacher.query.filter(Teacher.number == session["user_number"]).first() if session[
                                                                                          "user_type"] == 't' else Student.query.filter(
         Student.number == session["user_number"]).first()
@@ -141,8 +139,6 @@ def user_head(image_id):
 @public.route("/save_user_info", methods=["POST"])
 def save_user_info():
     try:
-        session["user_number"] = "149074064"
-        session["user_type"] = 's'
         data = json.loads(request.data.decode())
         user = Teacher.query.filter(Teacher.number == session["user_number"]).first() if session[
                                                                                              "user_type"] == 't' else Student.query.filter(

@@ -64,7 +64,10 @@ def delete_lost():
     id = request.args.get("id")
     lost = LostFound.query.filter(LostFound.id == id).first()
     if lost.img_url != "default.jpg":
-        os.remove('app/upload/lostandfound/images/' + lost.img_url)
+        try:
+            os.remove('app/upload/lostandfound/images/' + lost.img_url)
+        except:
+            pass
     db.session.delete(lost)
     db.session.commit()
     return json.dumps({"code": 1})

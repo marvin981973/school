@@ -84,11 +84,15 @@ class Student(db.Model):
     def __init__(self, number):
         self.number = number
 
+    # 获取课程
+    def get_course(self):
+        courses = SelectedCourse.query.filter(SelectedCourse.student_id == self.number,
+                                              SelectedCourse.school_year == getXNXQ()).all()
+        return courses
+
     # 获取课程表
     def get_class_table(self):
-        xn_xq = getXNXQ()
-        courses = SelectedCourse.query.filter(SelectedCourse.student_id == self.number,
-                                              SelectedCourse.school_year == xn_xq).all()
+        courses = self.get_course()
         res = []
         for cour in courses:
             established_course = EstablishedCourse.query.filter(
@@ -243,8 +247,9 @@ class Teacher(db.Model):
         attendance.id = id
         try:
             attendance.save()
+            school_year = getXNXQ()
             for stu in data["absences"]:
-                s = AbsenceRecord(data["established_course_id"], id, stu["absence_type"], stu["stu_id"])
+                s = AbsenceRecord(data["established_course_id"], id, stu["absence_type"], stu["stu_id"], school_year)
                 s.id = str(uuid.uuid1())
                 db.session.add(s)
                 if auto_calculate_daily_grade:
@@ -358,7 +363,7 @@ class EstablishedCourse(db.Model):
     school_year = db.Column(db.String(15))
     auto_calculate_daily_grade = db.Column(db.Boolean, nullable=False, default=True)
     absence_minus_pt = db.Column(db.Integer, nullable=False, default=1)
-    homework_minus_pt = db.Column(db.Integer, nullable=False, default=1)
+    daily_grade_ratio = db.Column(db.Integer, nullable=False, default=20)
 
     def __init__(self, course_id, capacity, class_time, class_room, class_period, teacher_id, school_year):
         self.course_id = course_id
@@ -410,7 +415,7 @@ class SelectedCourse(db.Model):
     established_course_id = db.Column(db.String(36),
                                       db.ForeignKey('established_course.id', ondelete='CASCADE', onupdate='CASCADE'))
     student_id = db.Column(db.String(36), db.ForeignKey('student.number', ondelete='CASCADE', onupdate='CASCADE'))
-    performance_score = db.Column(db.Integer, nullable=False, default=100)
+    performance_score = db.Column(db.Float, nullable=False, default=100)
     school_year = db.Column(db.String(15))
     final_grade = db.Column(db.Float)
 
@@ -454,12 +459,14 @@ class AbsenceRecord(db.Model):
                                      db.ForeignKey('attendance_record.id', ondelete='CASCADE', onupdate='CASCADE'))
     absence_type = db.Column(db.String(10))
     student_id = db.Column(db.String(36), db.ForeignKey('student.number', ondelete='CASCADE', onupdate='CASCADE'))
+    school_year = db.Column(db.String(15))
 
-    def __init__(self, established_course_id, attendance_record_id, absence_type, student_id):
+    def __init__(self, established_course_id, attendance_record_id, absence_type, student_id, school_year):
         self.established_course_id = established_course_id
         self.attendance_record_id = attendance_record_id
         self.absence_type = absence_type
         self.student_id = student_id
+        self.school_year = school_year
 
     def __repr__(self):
         return '<AbsenceRecord %r>' % self.id
