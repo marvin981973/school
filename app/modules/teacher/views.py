@@ -97,7 +97,7 @@ def get_dailygrade_setting():
     return json.dumps({
         "auto": e_course.auto_calculate_daily_grade,
         "queqin": e_course.absence_minus_pt,
-        "zuoye": e_course.homework_minus_pt
+        "zuoye": e_course.daily_grade_ratio
     })
 
 
@@ -107,7 +107,7 @@ def modify_dailygrade_setting():
     e_course = EstablishedCourse.query.filter(EstablishedCourse.id == e_course_id).first()
     e_course.auto_calculate_daily_grade = "true" == request.args.get("switch_checked")
     e_course.absence_minus_pt = int(request.args.get("queqin_value"))
-    e_course.homework_minus_pt = int(request.args.get("zuoye_value"))
+    e_course.daily_grade_ratio = int(request.args.get("zuoye_value"))
     e_course.save()
     return json.dumps({"code": 1})
 

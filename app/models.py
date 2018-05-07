@@ -521,6 +521,7 @@ class ClassesDynamic(db.Model):
     classes_id = db.Column(db.String(36), db.ForeignKey('classes.id', ondelete='CASCADE', onupdate='CASCADE'))
     create_time = db.Column(db.DateTime, nullable=False, default=datetime.now)
     publisher = db.Column(db.String(30))
+    publisher_type = db.Column(db.String(5))
     content = db.Column(db.Text)
     img_list = db.Column(db.Text)
 

@@ -114,7 +114,9 @@ def get_user_info():
         "number": user.number,
         "age": user.age,
         "sex": user.sex,
-        "birth_day": user.birth_day.strftime("%Y-%m-%d"),
+        "birth_day": user.birth_day.strftime(
+            "%Y-%m-%d") if user.birth_day else (datetime.datetime.now() - datetime.timedelta(
+            days=365 * user.age)).strftime("%Y-%m-%d"),
 
     })
 

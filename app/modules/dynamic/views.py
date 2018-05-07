@@ -3,7 +3,7 @@ import uuid
 import os
 
 from app import db
-from app.models import SchoolDynamic, Student, Teacher, Comment, Collection
+from app.models import SchoolDynamic, Student, Teacher, Comment, Collection, ClassesDynamic
 from app.modules.dynamic import dynamic
 import json
 from flask import request, session, Response
@@ -62,7 +62,6 @@ def get_news_content():
 
 
 def format_dynamic(items):
-    session["user_number"] = '149074064'
     data = []
     for item in items:
         imgs = item.imges.split("#")
@@ -108,13 +107,14 @@ def get_school_dynamic():
     pagination = SchoolDynamic.query.order_by(db.desc(SchoolDynamic.add_time)).paginate(cur_page, 20, False)
     has_next_page = (False if pagination.page == pagination.pages else True)
     data = format_dynamic(pagination.items)
-
     return json.dumps({"has_next_page": has_next_page, "data": data})
+
 
 @dynamic.route('/images/<image_id>')
 def image(image_id):
     image = open('app/upload/dynamic/images/{}'.format(image_id), 'rb')
     return Response(image, mimetype='image/jpeg')
+
 
 @dynamic.route('/uncollect_school_dynamic')
 def uncollect_school_dynamic():
@@ -130,8 +130,6 @@ def uncollect_school_dynamic():
 @dynamic.route('/collect_school_dynamic')
 def collect_school_dynamic():
     try:
-        session["user_number"] = '149074064'
-        session["user_type"] = 's'
         collection = Collection(request.args.get("collection_id"), session["user_number"], session["user_type"], '0')
         id = str(uuid.uuid1())
         collection.id = id
@@ -172,8 +170,6 @@ def load_comment():
 @dynamic.route('/comment', methods=['POST'])
 def comment():
     try:
-        session["user_number"] = "149074064"
-        session["user_type"] = 's'
         data = json.loads(request.data.decode())
         comment = Comment(data["id"], session["user_number"], session["user_type"], data["comment"], '0')
         comment.id = str(uuid.uuid1())
@@ -187,8 +183,6 @@ def comment():
 @dynamic.route('/add_school_dynamic', methods=['POST'])
 def add_school_dynamic():
     try:
-        session["user_number"] = "149074064"
-        session["user_type"] = 's'
         data = json.loads(request.data.decode())
         images = ""
         school_dynamic = SchoolDynamic(session["user_number"], session["user_type"], data["content"], images)
@@ -218,6 +212,45 @@ def upload_dynamic_image():
         return json.dumps({"code": 1})
     except:
         return json.dumps({"code": -1})
+
+
+@dynamic.route('/get_my_dynamic')
+def get_my_dynamic():
+    cur_page = int(request.args.get("page"))
+    pagination = SchoolDynamic.query.filter(SchoolDynamic.publisher_number == session['user_number']).order_by(
+        db.desc(SchoolDynamic.add_time)).paginate(cur_page, 20, False)
+    has_next_page = (False if pagination.page == pagination.pages else True)
+    data = format_dynamic(pagination.items)
+    return json.dumps({"has_next_page": has_next_page, "data": data})
+
+
+@dynamic.route('/delete_dynamic')
+def delete_dynamic():
+    try:
+        dynamic = SchoolDynamic.query.filter(SchoolDynamic.id == request.args.get('id')).first()
+        if dynamic.imges or dynamic.imges == '':
+            try:
+                imgs = dynamic.imges.split("#")
+                for i in imgs:
+                    os.remove('app/upload/dynamic/images/' + i)
+            except:
+                pass
+        db.session.delete(dynamic)
+        db.session.commit()
+        return json.dumps({'code': 1})
+    except:
+        return json.dumps({"code": -1})
+
+
+@dynamic.route('/get_class_dynamic')
+def get_class_dynamic():
+    user_class_id = Student.query.filter(Student.number == session["user_number"]).first().classes.id
+    cur_page = int(request.args.get("page"))
+    pagination = ClassesDynamic.query.filter(ClassesDynamic.classes_id == user_class_id).order_by(
+        db.desc(ClassesDynamic.create_time)).paginate(cur_page, 20, False)
+    has_next_page = (False if pagination.page == pagination.pages else True)
+    data = format_dynamic(pagination.items)
+    return json.dumps({"has_next_page": has_next_page, "data": data})
 
 
 if __name__ == "__main__":
