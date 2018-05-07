@@ -1,2 +1,10 @@
 /.idea
 /venv
+/app/modules/student/__pycache__
+/app/modules/teacher/__pycache__
+/app/tools/__pycache__
+/app/modules/__pycache__
+/app/modules/dynamic/__pycache__
+/app/modules/library/__pycache__
+/app/modules/public/__pycache__
+/app/modules/weather
