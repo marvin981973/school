@@ -3,7 +3,7 @@ import uuid
 import os
 
 from app import db
-from app.models import SchoolDynamic, Student, Teacher, Comment, Collection, ClassesDynamic
+from app.models import Dynamics, Student, Teacher, Comment, Collection
 from app.modules.dynamic import dynamic
 import json
 from flask import request, session, Response
@@ -81,7 +81,7 @@ def format_dynamic(items):
         user = Student.query.filter(
             Student.number == item.publisher_number).first() if item.publisher_type == 's' else Teacher.query.filter(
             Teacher.number == item.publisher_number).first()
-        collection = Collection.query.filter(Collection.type == '0', Collection.collection_id == item.id,
+        collection = Collection.query.filter(Collection.type == item.type, Collection.collection_id == item.id,
                                              Collection.collector == session["user_number"]).first()
         heart_count = Collection.query.filter(Collection.collection_id == item.id).count()
         data.append({
@@ -92,10 +92,11 @@ def format_dynamic(items):
             "publisher_number": item.publisher_number,
             "publisher_name": user.name,
             "head_url": user.head_url,
-            "have_img": length,
+            "have_img": imgs[0] != '',
             "images": images,
+            "dynamic_type": item.type,
             "comment_count": Comment.query.filter(Comment.parent_id == item.id,
-                                                  Comment.type == '0').count(),
+                                                  Comment.type == item.type).count(),
             "collection_id": collection.id if collection else ""
         })
     return data
@@ -104,7 +105,8 @@ def format_dynamic(items):
 @dynamic.route('/get_school_dynamic')
 def get_school_dynamic():
     cur_page = int(request.args.get("page"))
-    pagination = SchoolDynamic.query.order_by(db.desc(SchoolDynamic.add_time)).paginate(cur_page, 20, False)
+    pagination = Dynamics.query.filter(Dynamics.type == '0').order_by(db.desc(Dynamics.add_time)).paginate(cur_page, 20,
+                                                                                                           False)
     has_next_page = (False if pagination.page == pagination.pages else True)
     data = format_dynamic(pagination.items)
     return json.dumps({"has_next_page": has_next_page, "data": data})
@@ -116,7 +118,7 @@ def image(image_id):
     return Response(image, mimetype='image/jpeg')
 
 
-@dynamic.route('/uncollect_school_dynamic')
+@dynamic.route('/uncollect_dynamic')
 def uncollect_school_dynamic():
     try:
         collection = Collection.query.filter(Collection.id == request.args.get('collection_id')).first()
@@ -127,10 +129,11 @@ def uncollect_school_dynamic():
         return json.dumps({"code": -1})
 
 
-@dynamic.route('/collect_school_dynamic')
+@dynamic.route('/collect_dynamic')
 def collect_school_dynamic():
     try:
-        collection = Collection(request.args.get("collection_id"), session["user_number"], session["user_type"], '0')
+        collection = Collection(request.args.get("collection_id"), session["user_number"], session["user_type"],
+                                request.args.get('dynamic_type'))
         id = str(uuid.uuid1())
         collection.id = id
         db.session.add(collection)
@@ -142,7 +145,7 @@ def collect_school_dynamic():
 
 @dynamic.route('/load_dynamic_detail')
 def load_dynamic_detail():
-    dynamic = SchoolDynamic.query.filter(SchoolDynamic.id == request.args.get("id")).first()
+    dynamic = Dynamics.query.filter(Dynamics.id == request.args.get("id")).first()
     return json.dumps({"data": format_dynamic([dynamic])})
 
 
@@ -171,7 +174,8 @@ def load_comment():
 def comment():
     try:
         data = json.loads(request.data.decode())
-        comment = Comment(data["id"], session["user_number"], session["user_type"], data["comment"], '0')
+        comment = Comment(data["id"], session["user_number"], session["user_type"], data["comment"],
+                          data['dynamic_type'])
         comment.id = str(uuid.uuid1())
         db.session.add(comment)
         db.session.commit()
@@ -180,15 +184,20 @@ def comment():
         return json.dumps({'code': -1})
 
 
-@dynamic.route('/add_school_dynamic', methods=['POST'])
-def add_school_dynamic():
+@dynamic.route('/add_dynamic', methods=['POST'])
+def add_dynamic():
     try:
         data = json.loads(request.data.decode())
-        images = ""
-        school_dynamic = SchoolDynamic(session["user_number"], session["user_type"], data["content"], images)
+        dynamic_type = data["dynamic_type"]
         id = str(uuid.uuid1())
-        school_dynamic.id = id
-        db.session.add(school_dynamic)
+        if dynamic_type == '0':
+            dynamic = Dynamics(None, session["user_number"], session["user_type"], data["content"], '')
+        else:
+            stu = Student.query.filter_by(number=session["user_number"]).first()
+            dynamic = Dynamics(stu.classes.id, session["user_number"], session["user_type"], data["content"], '')
+        dynamic.id = id
+        dynamic.type = dynamic_type
+        db.session.add(dynamic)
         db.session.commit()
         return json.dumps({'code': 1, 'id': id})
     except:
@@ -205,9 +214,9 @@ def upload_dynamic_image():
         file_name = str(uuid.uuid1()) + "." + file.filename.split(".")[-1:][0]
         file.save(path + "/" + file_name)
         id = request.form["id"]
-        school_dynamic = SchoolDynamic.query.filter(SchoolDynamic.id == id).first()
-        school_dynamic.imges += ("#" + file_name)
-        school_dynamic.imges = school_dynamic.imges.strip('#')
+        dynamic = Dynamics.query.filter(Dynamics.id == id).first()
+        dynamic.imges += ("#" + file_name)
+        dynamic.imges = dynamic.imges.strip('#')
         db.session.commit()
         return json.dumps({"code": 1})
     except:
@@ -217,8 +226,8 @@ def upload_dynamic_image():
 @dynamic.route('/get_my_dynamic')
 def get_my_dynamic():
     cur_page = int(request.args.get("page"))
-    pagination = SchoolDynamic.query.filter(SchoolDynamic.publisher_number == session['user_number']).order_by(
-        db.desc(SchoolDynamic.add_time)).paginate(cur_page, 20, False)
+    pagination = Dynamics.query.filter(Dynamics.publisher_number == session['user_number']).order_by(
+        db.desc(Dynamics.add_time)).paginate(cur_page, 20, False)
     has_next_page = (False if pagination.page == pagination.pages else True)
     data = format_dynamic(pagination.items)
     return json.dumps({"has_next_page": has_next_page, "data": data})
@@ -227,7 +236,7 @@ def get_my_dynamic():
 @dynamic.route('/delete_dynamic')
 def delete_dynamic():
     try:
-        dynamic = SchoolDynamic.query.filter(SchoolDynamic.id == request.args.get('id')).first()
+        dynamic = Dynamics.query.filter(Dynamics.id == request.args.get('id')).first()
         if dynamic.imges or dynamic.imges == '':
             try:
                 imgs = dynamic.imges.split("#")
@@ -246,8 +255,8 @@ def delete_dynamic():
 def get_class_dynamic():
     user_class_id = Student.query.filter(Student.number == session["user_number"]).first().classes.id
     cur_page = int(request.args.get("page"))
-    pagination = ClassesDynamic.query.filter(ClassesDynamic.classes_id == user_class_id).order_by(
-        db.desc(ClassesDynamic.create_time)).paginate(cur_page, 20, False)
+    pagination = Dynamics.query.filter(Dynamics.classes_id == user_class_id, Dynamics.type == '1').order_by(
+        db.desc(Dynamics.add_time)).paginate(cur_page, 20, False)
     has_next_page = (False if pagination.page == pagination.pages else True)
     data = format_dynamic(pagination.items)
     return json.dumps({"has_next_page": has_next_page, "data": data})

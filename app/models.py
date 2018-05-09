@@ -513,28 +513,6 @@ class ClassesNotification(db.Model):
         return '<ClassesNotification %r>' % self.name
 
 
-# 班级动态表
-class ClassesDynamic(db.Model):
-    __tablename__ = 'classes_dynamic'
-
-    id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
-    classes_id = db.Column(db.String(36), db.ForeignKey('classes.id', ondelete='CASCADE', onupdate='CASCADE'))
-    create_time = db.Column(db.DateTime, nullable=False, default=datetime.now)
-    publisher = db.Column(db.String(30))
-    publisher_type = db.Column(db.String(5))
-    content = db.Column(db.Text)
-    img_list = db.Column(db.Text)
-
-    def __init__(self, classes_id, publisher, content, img_list):
-        self.classes_id = classes_id
-        self.publisher = publisher
-        self.content = content
-        self.img_list = img_list
-
-    def __repr__(self):
-        return '<ClassesDynamic %r>' % self.name
-
-
 # 班级相册表
 class ClassesAlbum(db.Model):
     __tablename__ = 'classes_album'
@@ -567,25 +545,28 @@ class SchoolScenery(db.Model):
         return '<SchoolScenery %r>' % self.description
 
 
-# 校园动态表
-class SchoolDynamic(db.Model):
-    __tablename__ = 'school_dynamic'
+# 动态表
+class Dynamics(db.Model):
+    __tablename__ = 'dynamics'
 
     id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
-    publisher_number = db.Column(db.String(20))
-    publisher_type = db.Column(db.String(5))
+    classes_id = db.Column(db.String(36), db.ForeignKey('classes.id', ondelete='CASCADE', onupdate='CASCADE'))
     add_time = db.Column(db.DateTime, nullable=False, default=datetime.now)
+    publisher_number = db.Column(db.String(30))
+    publisher_type = db.Column(db.String(5))
     content = db.Column(db.Text)
-    imges = db.Column(db.String(500))
+    imges = db.Column(db.Text)
+    type = db.Column(db.String(5))
 
-    def __init__(self, publisher_number, publisher_type, content, imges):
+    def __init__(self, classes_id, publisher_number, publisher_type, content, imges):
+        self.classes_id = classes_id
         self.publisher_number = publisher_number
         self.publisher_type = publisher_type
         self.content = content
         self.imges = imges
 
     def __repr__(self):
-        return '<SchoolDynamic %r>' % self.id
+        return '<ClassesDynamic %r>' % self.name
 
 
 # 评论表
