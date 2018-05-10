@@ -1,5 +1,6 @@
 import json
 
+from app import db
 from app.modules.student import student
 from flask import session, request
 
@@ -19,7 +20,6 @@ def get_class_table():
 
 @student.route("/get_courses")
 def get_courses():
-    session["user_number"] = "149074064"
     stu = Student(session["user_number"])
     courses = stu.get_course()
     res = []
@@ -49,11 +49,23 @@ def get_courses():
     return json.dumps(res)
 
 
+@student.route("/check_absences")
+def check_absences():
+    return json.dumps({'count': AbsenceRecord.query.filter(AbsenceRecord.student_id == session["user_number"],
+                                                           AbsenceRecord.school_year == getXNXQ(),
+                                                           AbsenceRecord.checked == False).count()})
+
+
 @student.route("/load_attendance_records")
 def load_attendance_records():
-    session["user_number"] = "149074064"
     mode = request.args.get("mode")
     res = []
+    absences = AbsenceRecord.query.filter(AbsenceRecord.student_id == session["user_number"],
+                                          AbsenceRecord.school_year == getXNXQ(),
+                                          AbsenceRecord.checked == False).all()
+    for absence in absences:
+        absence.checked = True
+    db.session.commit()
     if mode == '0':
         esc_id = request.args.get("esc_id")
         records = AbsenceRecord.query.filter(AbsenceRecord.student_id == session["user_number"],

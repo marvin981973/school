@@ -460,6 +460,7 @@ class AbsenceRecord(db.Model):
     absence_type = db.Column(db.String(10))
     student_id = db.Column(db.String(36), db.ForeignKey('student.number', ondelete='CASCADE', onupdate='CASCADE'))
     school_year = db.Column(db.String(15))
+    checked = db.Column(db.Boolean, default=False)
 
     def __init__(self, established_course_id, attendance_record_id, absence_type, student_id, school_year):
         self.established_course_id = established_course_id
