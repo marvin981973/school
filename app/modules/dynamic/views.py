@@ -184,6 +184,17 @@ def comment():
         return json.dumps({'code': -1})
 
 
+@dynamic.route('/check_dynamic_comment')
+def check_dynamic_comment():
+    try:
+        comment = Comment.query.filter(Comment.id == request.args.get('comment_id')).first()
+        comment.checked = True
+        db.session.commit()
+        return json.dumps({'code': 1})
+    except:
+        return json.dumps({'code': -1})
+
+
 @dynamic.route('/add_dynamic', methods=['POST'])
 def add_dynamic():
     try:

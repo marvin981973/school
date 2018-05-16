@@ -1,9 +1,12 @@
+import uuid
+
 from app import db
 from app.modules.teacher import teacher
 
 from flask import session, request
 import json
-from app.models import Teacher, AttendanceRecord, EstablishedCourse, SelectedCourse, EstablishedCourseNotification
+from app.models import Teacher, AttendanceRecord, EstablishedCourse, SelectedCourse, EstablishedCourseNotification, \
+    EstablishedCourseNotificationCheck
 
 
 @teacher.route("/")
@@ -172,10 +175,17 @@ def load_noti_content():
          "content": notifications.noti_content}) if notifications else json.dumps({"code": -1})
 
 
-@teacher.route("/add_noti",methods=["POST"])
+@teacher.route("/add_noti", methods=["POST"])
 def add_noti():
     data = json.loads(request.data.decode())
+    notification_id = str(uuid.uuid1())
     notification = EstablishedCourseNotification(data["e_course_id"], data["form"]["title"], data["form"]["content"])
+    notification.id = notification_id
     db.session.add(notification)
+    students = SelectedCourse.query.filter(SelectedCourse.established_course_id == data["e_course_id"]).all()
+    for stu in students:
+        check = EstablishedCourseNotificationCheck(notification_id, stu.student_id)
+        check.id = str(uuid.uuid1())
+        db.session.add(check)
     db.session.commit()
     return json.dumps({"code": 1})

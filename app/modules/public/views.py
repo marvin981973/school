@@ -16,7 +16,8 @@ from app.modules.weather.weather import Weather
 from app.config import wx_config
 
 from app.tools.WebPageParsing import ScrapyPage
-from app.models import UserBind, SchoolScenery, Teacher, Student
+from app.models import UserBind, SchoolScenery, Teacher, Student, Comment, Dynamics, AbsenceRecord, getXNXQ, \
+    EstablishedCourseNotificationCheck, EstablishedCourseNotification, Notification, EstablishedCourse
 
 
 @public.route('/')
@@ -30,6 +31,21 @@ def get_image(image_id):
     return Response(image, mimetype='image/jpeg')
 
 
+def init_notification():
+    res = {}
+    res["comment_count"] = Comment.query.join(Dynamics, Comment.parent_id == Dynamics.id).filter(
+        Dynamics.publisher_number == session["user_number"], Comment.checked == False).count()
+    if session["user_type"] == 's':
+        res["absence_count"] = AbsenceRecord.query.filter(AbsenceRecord.student_id == session["user_number"],
+                                                          AbsenceRecord.school_year == getXNXQ(),
+                                                          AbsenceRecord.checked == False).count()
+        res["course_notification"] = EstablishedCourseNotificationCheck.query.filter(
+            EstablishedCourseNotificationCheck.user_number == session["user_number"],
+            EstablishedCourseNotificationCheck.status == False).count()
+
+    return res
+
+
 @public.route('/check_user', methods=['POST'])
 def check_user():
     login_code = json.loads(request.data.decode())
@@ -41,8 +57,10 @@ def check_user():
         if bind:
             session['user_number'] = bind.number
             session['user_type'] = bind.identity_type
+            return json.dumps(
+                {'code': '1', 'msg': '', 'user_type': bind.identity_type, 'notification': init_notification()})
         session['open_id'] = open_id
-        return UserBind.check_bind(open_id)
+        return json.dumps({'code': '0', 'msg': ''})
     except:
         return json.dumps({'code': '-1', 'msg': '用户验证失败...'})
 
@@ -175,5 +193,66 @@ def get_school_calendar():
     return json.dumps({"data": data})
 
 
+@public.route("/check_unread_message")
+def check_unread_message():
+    return json.dumps({"notification": init_notification()})
+
+
+@public.route("/get_unread_message")
+def get_unread_message():
+    unread_comments = Comment.query.join(Dynamics, Comment.parent_id == Dynamics.id).filter(
+        Dynamics.publisher_number == session["user_number"], Comment.checked == False).all()
+    unread_course_notifications = EstablishedCourseNotificationCheck.query.filter(
+        EstablishedCourseNotificationCheck.user_number == session["user_number"],
+        EstablishedCourseNotificationCheck.status == False).all()
+    messages = []
+    for comment in unread_comments:
+        dynamic = Dynamics.query.filter(Dynamics.id == comment.parent_id).first()
+        messages.append({
+            "type": '0',
+            'commenter': comment.commenter,
+            'commenter_head': Student.query.filter_by(
+                number=comment.commenter).first().head_url if comment.commenter_type == 's' else Teacher.query.filter_by(
+                number=comment.commenter).first().head_url,
+            'time': comment.add_time.strftime("%Y-%m-%d %H:%M:%S"),
+            'content': comment.content,
+            'id': comment.id,
+            'dynamic_type': comment.type,
+            'dynamic_id': dynamic.id,
+            'dynamic_summarize': dynamic.content
+        })
+    for course_notification in unread_course_notifications:
+        notification = EstablishedCourseNotification.query.filter_by(id=course_notification.notification_id).first()
+        e_course = EstablishedCourse.query.filter_by(id=notification.established_course_id).first()
+        messages.append({
+            "type": '1',
+            "id": course_notification.id,
+            "create_time": notification.create_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "notification_id": notification.id,
+            "noti_title": notification.noti_title,
+            "course": e_course.course.name,
+            "teacher": e_course.teacher.name,
+            "teacher_head": e_course.teacher.head_url,
+
+        })
+    return json.dumps({"data": messages})
+
+
+@public.route('/get_system_message')
+def get_system_message():
+    cur_page = int(request.args.get("page"))
+    pagination = Notification.query.order_by(db.desc(Notification.create_time)).paginate(
+        cur_page, 10, False)
+    has_next_page = (False if pagination.page == pagination.pages else True)
+    data = []
+    for item in pagination.items:
+        data.append({
+            "create_time": item.create_time.strftime("%Y-%m-%d"),
+            "title": item.title,
+            "content": item.content
+        })
+    return json.dumps({"has_next_page": has_next_page, "data": data})
+
+
 if __name__ == "__main__":
-    get_school_calendar()
+    init_notification()

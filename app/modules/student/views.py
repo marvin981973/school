@@ -4,7 +4,7 @@ from app import db
 from app.modules.student import student
 from flask import session, request
 
-from app.models import Student, EstablishedCourse, AbsenceRecord, getXNXQ
+from app.models import Student, EstablishedCourse, AbsenceRecord, getXNXQ, EstablishedCourseNotificationCheck
 
 
 @student.route("/")
@@ -47,13 +47,6 @@ def get_courses():
 
         })
     return json.dumps(res)
-
-
-@student.route("/check_absences")
-def check_absences():
-    return json.dumps({'count': AbsenceRecord.query.filter(AbsenceRecord.student_id == session["user_number"],
-                                                           AbsenceRecord.school_year == getXNXQ(),
-                                                           AbsenceRecord.checked == False).count()})
 
 
 @student.route("/load_attendance_records")
@@ -107,3 +100,15 @@ def load_attendance_records():
             })
 
     return json.dumps(res)
+
+
+@student.route('/check_course_notification')
+def check_course_notification():
+    try:
+        check = EstablishedCourseNotificationCheck.query.filter(
+            EstablishedCourseNotificationCheck.id == request.args.get('check_id')).first()
+        check.status = True
+        db.session.commit()
+        return json.dumps({'code': 1})
+    except:
+        return json.dumps({'code': -1})

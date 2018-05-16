@@ -298,13 +298,6 @@ class UserBind(db.Model):
         self.number = number
         self.identity_type = identity_type
 
-    @staticmethod
-    def check_bind(open_id):
-        bind = UserBind.query.filter_by(openid=open_id).first()
-        if bind:
-            return json.dumps({'code': '1', 'msg': '', 'user_type': bind.identity_type})
-        return json.dumps({'code': '0', 'msg': ''})
-
     def __validate_user(self):
         if self.query.filter_by(openid=self.openid).first():
             raise DataConflictException(u'用户已绑定')
@@ -387,8 +380,7 @@ class EstablishedCourseNotification(db.Model):
     __tablename__ = 'established_course_notification'
 
     id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
-    established_course_id = db.Column(db.String(36),
-                                      db.ForeignKey('established_course.id', ondelete='CASCADE', onupdate='CASCADE'))
+    established_course_id = db.Column(db.String(36))
     create_time = db.Column(db.DateTime, nullable=False, default=datetime.now())
     noti_title = db.Column(db.String(100))
     noti_content = db.Column(db.Text)
@@ -405,6 +397,23 @@ class EstablishedCourseNotification(db.Model):
 
     def __repr__(self):
         return '<EstablishedCourseNotification %r>' % self.id
+
+
+class EstablishedCourseNotificationCheck(db.Model):
+    __tablename__ = 'established_course_notification_check'
+
+    id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
+    notification_id = db.Column(db.String(36))
+    user_number = db.Column(db.String(36))
+    create_time = db.Column(db.DateTime, nullable=False, default=datetime.now)
+    status = db.Column(db.Boolean, default=False)
+
+    def __init__(self, notification_id, user_number):
+        self.notification_id = notification_id
+        self.user_number = user_number
+
+    def __repr__(self):
+        return '<EstablishedCourseNotificationCheck %r>' % self.id
 
 
 # 选课表
@@ -497,23 +506,6 @@ class LostFound(db.Model):
         return '<LostFound %r>' % self.id
 
 
-# 班级通知表
-class ClassesNotification(db.Model):
-    __tablename__ = 'classes_notification'
-
-    id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
-    classes_id = db.Column(db.String(36), db.ForeignKey('classes.id', ondelete='CASCADE', onupdate='CASCADE'))
-    create_time = db.Column(db.DateTime, nullable=False, default=datetime.now)
-    content = db.Column(db.Text)
-
-    def __init__(self, classes_id, content):
-        self.classes_id = classes_id
-        self.content = content
-
-    def __repr__(self):
-        return '<ClassesNotification %r>' % self.name
-
-
 # 班级相册表
 class ClassesAlbum(db.Model):
     __tablename__ = 'classes_album'
@@ -581,6 +573,7 @@ class Comment(db.Model):
     add_time = db.Column(db.DateTime, nullable=False, default=datetime.now)
     content = db.Column(db.Text)
     type = db.Column(db.String(5))  # 0 校园动态评论 1 班级动态评论
+    checked = db.Column(db.Boolean, default=False)
 
     def __init__(self, parent_id, commenter, commenter_type, content, type):
         self.parent_id = parent_id
@@ -612,6 +605,22 @@ class Collection(db.Model):
 
     def __repr__(self):
         return '<Collection %r>' % self.id
+
+
+# 系统通知表
+class Notification(db.Model):
+    __tablename__ = 'notification'
+
+    id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
+    create_time = db.Column(db.DateTime, nullable=False, default=datetime.now)
+    title = db.Column(db.String(100))
+    content = db.Column(db.Text)
+
+    def __init__(self, title, content):
+        self.title = title
+        self.content = content
+
+    # 系统通知表
 
 
 if __name__ == "__main__":
