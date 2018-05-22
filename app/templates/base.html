@@ -1,0 +1,93 @@
+{% extends "bootstrap/base.html" %}
+
+{% block head %}
+    {{ super() }}
+    {#        <link rel="icon" href="{{ url_for("static",filename='favicon.ico') }}" type="image/x-icon">#}
+    <link rel="stylesheet" href="{{ url_for("static",filename='styles.css') }}" type="text/css">
+    <link rel="stylesheet" href="{{ url_for("static",filename='bootstrap_table/bootstrap-table.min.css') }}"
+          type="text/css">
+{% endblock %}
+{% block title %}校园助手后台管理{% endblock %}
+
+{% block navbar %}
+    <div class="navbar navbar-default navbar-fixed-top nav_bar" role="navigation">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand">校园助手后台管理</a>
+            </div>
+            {% if current_user.is_authenticated %}
+                <div class="navbar-collapse collapse">
+                    <ul class="nav navbar-nav navbar-right">
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                用户管理<b class="caret"></b>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="{{ url_for("admin.user_student") }}">学生</a></li>
+                                <li><a href="#">教师</a></li>
+                                <li><a href="#">管理员</a></li>
+                            </ul>
+                        </li>
+
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                资源管理<b class="caret"></b>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="#">小程序首页轮播图</a></li>
+                                <li><a href="#">校园风光</a></li>
+                            </ul>
+                        </li>
+
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                其他<b class="caret"></b>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="#">问卷调查</a></li>
+                                <li><a href="#">系统通知</a></li>
+                                <li><a href="#">反馈查看</a></li>
+                            </ul>
+                        </li>
+
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                管理员<b class="caret"></b>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="#">修改密码</a></li>
+                                <li><a href="{{ url_for("admin.logout") }}">注销</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript" src="/static/bootstrap_table/bootstrap-table.min.js"></script>
+    <script type="text/javascript" src="/static/bootstrap_table/bootstrap-table-zh-CN.min.js"></script>
+    <script type="text/javascript" src="/static/layer/layer.js"></script>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        {% for message in get_flashed_messages() %}
+            <div class="alert alert-warning">
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                {{ message }}
+            </div>
+        {% endfor %}
+        {% block page_nav %}{% endblock %}
+        {% block page_content %}{% endblock %}
+    </div>
+{% endblock %}

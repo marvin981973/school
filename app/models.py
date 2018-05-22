@@ -2,10 +2,13 @@ import json
 import uuid
 from datetime import datetime
 
-from app import create_app_for_db, db
+from werkzeug.security import generate_password_hash, check_password_hash
+
+from app import create_app_for_db, db, login_manager
 
 from app.tools.CustomException import DataConflictException
 from app.tools import get_random
+from flask_login import UserMixin
 
 
 def getXNXQ():
@@ -620,8 +623,30 @@ class Notification(db.Model):
         self.title = title
         self.content = content
 
-    # 系统通知表
 
+# 管理员
+class Admin(UserMixin, db.Model):
+    __tablename__ = 'admin'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_name = db.Column(db.String(20))
+    create_time = db.Column(db.DateTime, nullable=False, default=datetime.now)
+    password_hash = db.Column(db.String(100))
+
+    @property
+    def password(self):
+        raise AttributeError('password is not readable attribute')
+
+    @password.setter
+    def password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def verify_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return Admin.query.get(int(user_id))
 
 if __name__ == "__main__":
     db.create_all(app=create_app_for_db())
