@@ -19,11 +19,12 @@ def generate_form_input(item, scale='12'):
                 'name'] + '" max="' + item.get('max', '100') + '" class="form-control">'
         else:
             html = '<input type="' + input_type + '" name="' + item['name'] + '" class="form-control">'
-    else:  # select框
+    elif item.get('category', 'input') == 'select':  # select框
         html = '    <select name="' + item['name'] + '" class="form-control">'
         for option in item['options']:
             html += '  <option value="' + option['value'] + '">' + option['text'] + '</option>'
-
+    else:
+        html = '    <textarea name="' + item['name'] + '" class="form-control" rows="5"></textarea>'
     return '<div class="col-sm-' + scale + '">' + \
            '  <div class="input-group" style="margin: 5px 0px;">' + \
            '    <span class="input-group-addon">' + item['text'] + '</span>' + \
@@ -33,7 +34,7 @@ def generate_form_input(item, scale='12'):
            '</div>'
 
 
-def generate_form_html(form_array):
+def generate_form_html(form_array, mode='add'):
     form_input = ''
 
     for item in form_array:
@@ -45,12 +46,25 @@ def generate_form_html(form_array):
             form_input += generate_form_input(item)
 
     form_html = '<div class="modal-body" style="display: flex;padding: 15px 0 0 0;">' + \
-                '   <form>' + \
+                '   <form id="' + mode + '_form">' + \
                 '       ' + form_input + \
                 '   </form>' + \
                 '</div>'
 
     return form_html
+
+
+def generate_select_option(object_array, text, value):
+    options = []
+    try:
+        for object in object_array:
+            options.append({
+                'text': getattr(object, text),
+                'value': getattr(object, value)
+            })
+        return options
+    except Exception as e:
+        return options
 
 
 if __name__ == "__main__":

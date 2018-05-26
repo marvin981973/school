@@ -1,0 +1,112 @@
+{% extends "crud_base.html" %}
+
+{% block title %}管理员{% endblock %}
+{% block page_nav %}
+    <ol class="breadcrumb" style="margin-bottom: 8px;">
+        <li>用户管理</li>
+        <li>管理员</li>
+    </ol>
+{% endblock %}
+
+<script>
+    {% block generate_table %}
+        GenerateTable({
+            url: '{{ url_for("admin.load_admin") }}',
+            columns: [{
+                checkbox: true
+            }, {
+                sortable: true,
+                field: 'id',
+                title: 'ID'
+            }, {
+                field: 'user_name',
+                title: '用户名'
+            }, {
+                field: 'create_time',
+                title: '创建时间'
+            }, {
+                title: '操作',
+                formatter: function (value, row, index, field) {
+                    return '<a class="row_edit_button" data-id=' + row.id + '>编辑</a>&nbsp;<a class="row_delete_button" data-id=' + row.id + '>删除</a>'
+                }
+            }],
+            uniqueId: 'id',
+            sortName: 'id',
+            onLoadSuccess: function (e, row, element) {
+                $(".row_delete_button").click(function (e) {
+                    delete_action([{id: e.currentTarget.dataset.id}]);
+                });
+
+                $(".row_edit_button").click(function (e) {
+                    layer.open({
+                        type: 1,
+                        title: '编辑',
+                        area: ['{{ update_form_height*1.5 }}px', '{{ update_form_height }}px'],
+                        resize: false,
+                        btn: ['保存', '取消'],
+                        yes: function (index) {
+                            update_data = GetFormValue('update');
+                            update_data['id'] = e.currentTarget.dataset.id;
+                            PostRequest({
+                                url: '{{ url_for("admin.user_edit_admin") }}',
+                                data: JSON.stringify(update_data),
+                                success: function (res) {
+                                    if (res.code == 1) {
+                                        layer.msg(res.msg, {time: 1000});
+                                        $('#table').bootstrapTable('refresh');
+                                    } else
+                                        layer.msg(res.msg, {time: 1000});
+                                }
+                            });
+                            layer.close(index);
+                        },
+                        content: '{{ update_form_html|safe}}',
+                        success: function (la, index) {
+                            SetFormValue($('#table').bootstrapTable('getRowByUniqueId', e.currentTarget.dataset.id));
+                        }
+                    });
+                });
+            }
+        })
+    {% endblock %}
+
+    {% block do_add%}
+        PostRequest({
+            url: '{{ url_for("admin.user_add_admin") }}',
+            data: JSON.stringify(GetFormValue()),
+            success: function (res) {
+                if (res.code == 1) {
+                    layer.msg(res.msg, {time: 1000});
+                    $('#table').bootstrapTable('refresh');
+                } else
+                    layer.msg(res.msg, {time: 1000});
+            }
+        });
+        layer.close(index);
+    {% endblock %}
+
+    {% block do_delete %}
+        delete_ids = [];
+        $.each(selections, function (index, value, array) {
+            delete_ids.push(parseInt(value.id));
+        });
+        PostRequest({
+            url: '{{ url_for("admin.user_delete_admin") }}',
+            data: JSON.stringify({
+                ids: delete_ids
+            }),
+            success: function (res) {
+                if (res.code == 1 && !res.flag) {
+                    layer.msg('删除成功', {time: 1000});
+                    $('#table').bootstrapTable('refresh');
+                    return;
+                }
+                if (res.flag) {
+                    layer.msg('删除选项包含正在登陆用户', {time: 1000});
+                    $('#table').bootstrapTable('refresh');
+                } else
+                    layer.msg('删除失败', {time: 1000});
+            }
+        })
+    {% endblock %}
+</script>

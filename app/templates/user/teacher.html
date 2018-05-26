@@ -1,23 +1,23 @@
-{% extends "crud_base.html" %}
+{% extends 'crud_base.html' %}
 
-{% block title %}学生管理{% endblock %}
+{% block title %}教师管理{% endblock %}
 {% block page_nav %}
     <ol class="breadcrumb" style="margin-bottom: 8px;">
         <li>用户管理</li>
-        <li>学生管理</li>
+        <li>教师管理</li>
     </ol>
 {% endblock %}
 
 <script>
     {% block generate_table %}
-        GenerateTable({
-            url: '{{ url_for("admin.load_student") }}',
+        $('#table').bootstrapTable({
+            url: '{{ url_for("admin.load_teacher") }}',
             columns: [{
                 checkbox: true,
             }, {
                 sortable: true,
                 field: 'number',
-                title: '学号'
+                title: '工号'
             }, {
                 field: 'name',
                 title: '姓名'
@@ -34,45 +34,39 @@
                     return value == '1' ? '男' : '女';
                 }
             }, {
-                field: 'entrance_year',
-                title: '入学年份'
-            }, {
                 title: '操作',
                 formatter: function (value, row, index, field) {
                     return '<a>编辑</a>&nbsp;<a class="row_delete_button" data-number="' + row.number + '">删除</a>'
                 }
             }],
-            uniqueId: 'id',
             sortName: 'number',
+            sidePagination: "server",
             detailView: true,
             detailFormatter: function (index, row, element) {
                 return index;
             },
+            queryParams: function (params) {
+                return {
+                    page_size: params.pageSize,
+                    page_number: params.pageNumber,
+                    search_text: params.searchText,
+                    sort_name: params.sortName,
+                    sort_order: params.sortOrder
+                };
+            },
+            queryParamsType: '',
+            pagination: true,
+            paginationLoop: false,
+            search: true,
+            searchOnEnterKey: true,
+            toolbar: '#toolbar',
+            showRefresh: true,
             onLoadSuccess: function (e, row, element) {
                 $(".row_delete_button").click(function (e) {
                     delete_action([{number: e.currentTarget.dataset.number}]);
                 });
             }
-        })
-    {% endblock %}
-
-    {% block do_add%}
-        var data = GetFormValue();
-        PostRequest({
-            url: '{{ url_for("admin.user_delete_student") }}',
-            data: JSON.stringify({
-                number: delete_numbers
-            }),
-            success: function (res) {
-                if (res.code == 1) {
-                    layer.msg('新增成功', {time: 1000});
-                    $('#table').bootstrapTable('refresh');
-                } else {
-                    layer.msg('新增失败', {time: 1000});
-                }
-            }
-        })
-        layer.close(index);
+        });
     {% endblock %}
 
     {% block do_delete %}
@@ -80,11 +74,14 @@
         $.each(selections, function (index, value, array) {
             delete_numbers.push(value.number);
         });
-        PostRequest({
-            url: '{{ url_for("admin.user_delete_student") }}',
+        $.ajax({
+            url: '{{ url_for("admin.user_delete_teacher") }}',
+            method: 'post',
             data: JSON.stringify({
                 number: delete_numbers
             }),
+            dataType: 'json',
+            contentType: 'application/json',
             success: function (res) {
                 if (res.code == 1) {
                     layer.msg('删除成功', {time: 1000});

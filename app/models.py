@@ -644,9 +644,27 @@ class Admin(UserMixin, db.Model):
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+
+# 反馈表
+class Feedback(db.Model):
+    __tablename__ = 'feedback'
+
+    id = db.Column(db.String(36), primary_key=True, nullable=False, default=str(uuid.uuid1()))
+    create_time = db.Column(db.DateTime, nullable=False, default=datetime.now)
+    user_id = db.Column(db.String(50))
+    user_name = db.Column(db.String(50))
+    content = db.Column(db.Text)
+
+    def __init__(self, user_id, user_name, content):
+        self.user_id = user_id
+        self.user_name = user_name
+        self.content = content
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return Admin.query.get(int(user_id))
+
 
 if __name__ == "__main__":
     db.create_all(app=create_app_for_db())

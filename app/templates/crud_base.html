@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+    {% block toolbar %}
+        <div id="toolbar" class="button_toolbar">
+            <button type="button" class="btn btn-default" id="add_button">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>增加
+            </button>
+            <button type="button" class="btn btn-default" id="delete_button">
+                <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>删除
+            </button>
+        </div>
+    {% endblock %}
+
+    <table id="table"></table>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript" src="/static/js/tools.js"></script>
+    <script>
+        $(function () {
+            {% block generate_table %}{% endblock %}
+            $("#add_button").click(function (e) {
+                layer.open({
+                    type: 1,
+                    title: '新增',
+                    area: ['{{ add_form_height*1.5 }}px', '{{ add_form_height }}px'],
+                    resize: false,
+                    btn: ['新增', '取消'],
+                    yes: function (index) {
+                        {% block do_add %}{% endblock %}
+                    },
+                    content: '{{ add_form_html|safe}}'
+                });
+            })
+
+            function delete_action(selections) {
+                layer.confirm('确认删除？', {
+                    btn: ['删除', '取消'],
+                    title: '删除'
+                }, function () {
+                    {% block do_delete %}{% endblock %}
+                });
+
+            }
+
+            $("#delete_button").click(function () {
+                var selections = $('#table').bootstrapTable('getSelections');
+                if (selections.length == 0) {
+                    layer.msg('请至少选择一行数据', {time: 1000});
+                    return;
+                }
+                delete_action(selections);
+            });
+        });
+    </script>
+{% endblock %}

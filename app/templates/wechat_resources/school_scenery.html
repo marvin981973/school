@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+
+{% block title %}校园风光{% endblock %}
+{% block page_nav %}
+    <ol class="breadcrumb" style="margin-bottom: 8px;">
+        <li>资源管理</li>
+        <li>校园风光</li>
+    </ol>
+{% endblock %}
+
+{% block page_content %}
+    <button style="margin-bottom: 5px;" type="button" class="btn btn-success " id="upload_button">
+        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>上传
+    </button>
+    <input id="upload_input" multiple name="file" accept="image/*"
+           type="file" style="display: none"/>
+    <div class="row">
+        {% for item in scenery %}
+            <div class="col-md-2">
+                <div class="thumbnail list_image" style="position: relative;">
+                    <div data-id="{{ item.id }}" class="delete_img">╳</div>
+                    <img class="data-img" style="min-height: 125px;"
+                         src="/static/images/school_scenery/{{ item.img_url }}" alt="...">
+                    <div class="caption">
+                        <p style="text-align: center;margin: 0 0 0px;overflow:hidden;text-overflow:ellipsis;white-space: nowrap;">{{ item.description }}</p>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        {% if pagination.pages > 1 %}
+            <div class="col-md-12">
+                <ul class="pull-right pagination">
+                    <li {% if not pagination.has_prev %}class="disabled"{% endif %}>
+                        <a href="
+                                {% if pagination.has_prev %}{{ url_for('admin.school_scenery',page=pagination.page - 1) }}{% else %}#{% endif %}">
+                            &laquo;
+                        </a>
+                    </li>
+                    {% for p in pagination.iter_pages() %}
+                        {% if p %}
+                            {% if p==pagination.page %}
+                                <li class="active">
+                                    <a href="{{ url_for('admin.school_scenery',page=p) }}">{{ p }}</a>
+                                </li>
+                            {% else %}
+                                <li>
+                                    <a href="{{ url_for('admin.school_scenery',page=p) }}">{{ p }}</a>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="disabled"><a href="#">&hellip;</a></li>
+                        {% endif %}
+                    {% endfor %}
+                    <li {% if not pagination.has_next %}class="disabled"{% endif %}>
+                        <a href="
+                                {% if pagination.has_next %}{{ url_for('admin.school_scenery',page=pagination.page + 1) }}{% else %}#{% endif %}">
+                            &raquo;
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript" src="/static/js/tools.js"></script>
+    <script type="text/javascript">
+
+        var upload_status = false;
+        var upload_index = 0;
+
+        function upload_img(e) {
+            if (upload_status) {
+                layer.msg('正在进行上传', {time: 1000});
+                return;
+            }
+            upload_status = true;
+            var pics = $('#upload_input')[0].files;
+            do_upload(pics);
+        }
+
+        function do_upload(pics) {
+            if (upload_status) {
+                if (upload_index == pics.length) {
+                    $(".progress-bar").css('width', 545);
+                    $(".progress-bar").text('上传完成');
+                    upload_status = false;
+                    layer.msg('上传完成', {time: 1000});
+                    close_layer_window();
+                    window.location.href = "{{ url_for('admin.school_scenery') }}";
+                    return;
+                }
+                $(".progress-bar").text('正在上传' + (upload_index + 1).toString() + '/' + pics.length.toString() + '张图片');
+                var fd = new FormData();
+                fd.append('file', pics[upload_index]);
+                UploadRequest({
+                    url: "{{ url_for('admin.upload_school_scenery') }}",
+                    data: fd,
+                    success: function (res) {
+                        $(".progress-bar").css('width', (upload_index + 1) * 545 / pics.length);
+                        upload_index++;
+                        do_upload(pics);
+                    }
+                })
+            } else {
+                $(".progress-bar").text('取消上传:已上传' + (upload_index + 1) + '张图片');
+            }
+        }
+
+        function close_layer_window() {
+            if (upload_status) {
+                upload_status = false;
+                return;
+            }
+            layer.closeAll();
+        }
+
+
+        function close_all_layer() {
+            $('.my-layer').remove();
+            $('.layui-layer-shade').remove();
+
+        }
+
+        $(function () {
+            $("#upload_button").click(function () {
+                $("#upload_input").click();
+            });
+
+            $('#upload_input').change(function (e) {
+
+                upload_index = 0;
+                var preview_content = '';
+                var pics = $('#upload_input')[0].files;
+
+                //递归生成content内容
+                function generate_content(index) {
+                    if (index == pics.length) {
+                        var content = '<div class="preview_content">' + preview_content + '</div>' +
+                            '<div class="preview_button">' +
+                            '<div id="upload_label" class="progress">\n' +
+                            '<div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" style="width:70px;">' +
+                            pics.length +
+                            '张图片</div>' +
+                            '</div>' +
+                            '<button onclick="upload_img(this)" class="btn btn-info">上传</button>' +
+                            '<button onclick="close_layer_window()" class="btn btn-default">取消</button>' +
+                            '</div>';
+                        layer.open({
+                            type: 1,
+                            title: '预览',
+                            closeBtn: 0,
+                            shadeClose: false,
+                            scrollbar: false,
+                            area: ['700px', '500px'],
+                            resize: false,
+                            content: content
+                        });
+                        return;
+                    }
+                    var reader = new FileReader();
+                    reader.readAsDataURL(pics[index]);
+                    reader.onload = function (ev) {
+                        preview_content += ' <div class="col-md-4">\n' +
+                            '                <div class="thumbnail">\n' +
+                            '                    <img src="' + ev.target.result + '" alt="...">\n' +
+                            '                    <div class="caption">\n' +
+                            '                        <p style="text-align: center;margin: 0 0 0px;">' + pics[index].name + '</p>\n' +
+                            '                    </div>\n' +
+                            '                </div>\n' +
+                            '            </div>';
+                        generate_content(index + 1);
+                    }
+                }
+
+                generate_content(0);
+            });
+
+            $(".list_image").hover(function (e) {
+                $(e.currentTarget.firstElementChild).show();
+            });
+
+            $(".list_image").mouseleave(function (e) {
+                $(e.currentTarget.firstElementChild).hide();
+            });
+
+            $(".delete_img").click(function (e) {
+                layer.confirm('确认删除？', {
+                    btn: ['删除', '取消'],
+                    title: '删除'
+                }, function () {
+                    GetRequest({
+                        url: '{{ url_for("admin.delete_school_scenery") }}',
+                        data: {
+                            id: e.currentTarget.dataset.id
+                        },
+                        success: function (res) {
+                            if (res.code == 1) {
+                                layer.msg('删除完成', {time: 1000});
+                                window.location.href = "{{ url_for('admin.school_scenery') }}";
+                            } else {
+                                layer.msg('删除失败', {time: 1000});
+                            }
+                        }
+                    })
+                });
+            });
+
+            $(".list_image img").click(function (e) {
+                var src = $(e.currentTarget).attr('src');
+                layer.open({
+                    type: 1,
+                    title: false,
+                    closeBtn: 0,
+                    area: [(window.innerWidth - 500) + 'px', (window.innerHeight - 100) + 'px'],
+                    shadeClose: true,
+                    content: "<div onclick='close_all_layer()' class='pic_show'> " +
+                    "<div class='pic_box'>" +
+                    "<img src='" + src + "'/>" +
+                    "</div> " +
+                    "</div>",
+                    success: function () {
+                        $('.layui-layer').removeClass('layui-layer').addClass('my-layer');
+                    }
+                });
+            });
+
+        })
+    </script>
+{% endblock %}

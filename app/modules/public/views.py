@@ -152,7 +152,7 @@ def upload_user_head():
 
 @public.route('/user_head/<image_id>')
 def user_head(image_id):
-    image = open('app/upload/user/images/{}'.format(image_id), 'rb')
+    image = open('app/upload/user.py/images/{}'.format(image_id), 'rb')
     return Response(image, mimetype='image/jpeg')
 
 
