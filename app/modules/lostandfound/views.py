@@ -2,6 +2,7 @@ import json
 import uuid
 import os
 
+from PIL import Image
 from flask import request, Response, session
 
 from app import db
@@ -26,16 +27,25 @@ def load_images(image_id):
 @lostandfound.route("/load_list")
 def load_list():
     cur_page = int(request.args.get("page"))
-    pagination = LostFound.query.filter(LostFound.status == '0').order_by(db.desc(LostFound.add_time)).paginate(
-        cur_page, 10, False)
+    search_text = request.args.get("search_text", "")
+    if (search_text == ""):
+        pagination = LostFound.query.filter(LostFound.status == '0').order_by(db.desc(LostFound.add_time)).paginate(
+            cur_page, 10, False)
+    else:
+        pagination = LostFound.query.filter(LostFound.status == '0',
+                                            LostFound.lost_object.like("%" + search_text + "%")).order_by(
+            db.desc(LostFound.add_time)).paginate(
+            cur_page, 10, False)
     has_next_page = (False if pagination.page == pagination.pages else True)
     data = []
     for item in pagination.items:
         data.append({
-            "add_time": item.add_time.strftime("%Y-%m-%d"),
+            "add_time": item.add_time.strftime("%Y-%m-%d %H:%M:%S"),
             "publisher_name": item.publisher_name,
-            "title": item.title,
+            "place": item.place,
+            "lost_object": item.lost_object,
             "img_url": item.img_url if item.img_url else 'default.jpg',
+            "phone": item.telephone,
             "description": item.description
         })
     return json.dumps({"has_next_page": has_next_page, "data": data})
@@ -48,10 +58,11 @@ def load_mylost():
     data = []
     for item in items:
         data.append({
-            "add_time": item.add_time.strftime("%Y-%m-%d"),
+            "add_time": item.add_time.strftime("%Y-%m-%d %H:%M:%S"),
             "publisher_name": item.publisher_name,
             "id": item.id,
-            "title": item.title,
+            "place": item.place,
+            "lost_object": item.lost_object,
             "img_url": item.img_url if item.img_url else 'default.jpg',
             "description": item.description,
             "status": item.status
@@ -91,7 +102,14 @@ def upload():
         os.makedirs(path)
     file = request.files["file"]
     file_name = str(uuid.uuid1()) + "." + file.filename.split(".")[-1:][0]
-    file.save(path + "/" + file_name)
+    save_path = path + "/" + file_name
+    file.save(save_path)
+    img = Image.open(save_path)
+    height = img.size[1]
+    width = img.size[0]
+    img.thumbnail((width // 1.5, height // 1.5))
+    img.save(save_path)
+
     return json.dumps({"code": 1, "file_name": file_name})
 
 
@@ -102,7 +120,9 @@ def add_lost():
     publisher_name = Student.query.filter(Student.number == publisher).first().name if session[
                                                                                            "user_type"] == 's' else Teacher.query.filter(
         Teacher.number == publisher).first().name
-    lost = LostFound(publisher, publisher_name, data["title"], data["description"], data["img_url"])
+    lost = LostFound(publisher, publisher_name, data['lost_object'], data["place"], data["description"],
+                     data["img_url"], data["telephone"])
+    lost.id = str(uuid.uuid1())
     db.session.add(lost)
     db.session.commit()
     return json.dumps({"code": 1})

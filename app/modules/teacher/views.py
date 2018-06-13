@@ -119,14 +119,22 @@ def modify_dailygrade_setting():
 def get_students():
     e_course_id = request.args.get("e_course_id")
     students = SelectedCourse.query.filter(SelectedCourse.established_course_id == e_course_id).all()
-    res = [{
-        "name": stu.student.name,
-        "head": stu.student.head_url,
-        "c_name": stu.student.classes.name,
-        "stu_id": stu.student_id,
-        "f_grade": stu.final_grade,
-        "p_grade": stu.performance_score
-    } for stu in students]
+    e_course = EstablishedCourse.query.filter(EstablishedCourse.id == e_course_id).first()
+    res = []
+    for stu in students:
+        grade = None
+        if stu.final_grade:
+            grade = round(stu.performance_score * (e_course.daily_grade_ratio / 100) + stu.final_grade * (
+                    1 - e_course.daily_grade_ratio / 100), 1)
+        res.append({
+            "name": stu.student.name,
+            "head": stu.student.head_url,
+            "c_name": stu.student.classes.name,
+            "stu_id": stu.student_id,
+            "f_grade": stu.final_grade,
+            "p_grade": stu.performance_score,
+            "c_grade": grade
+        })
     return json.dumps(res)
 
 
@@ -187,5 +195,16 @@ def add_noti():
         check = EstablishedCourseNotificationCheck(notification_id, stu.student_id)
         check.id = str(uuid.uuid1())
         db.session.add(check)
+    db.session.commit()
+    return json.dumps({"code": 1})
+
+
+@teacher.route("/save_final_grade", methods=["POST"])
+def save_final_grade():
+    data = json.loads(request.data.decode())
+    for key in data["grade"]:
+        s_course = SelectedCourse.query.filter(SelectedCourse.student_id == key,
+                                               SelectedCourse.established_course_id == data["e_course_id"]).first()
+        s_course.final_grade = float(data["grade"][key])
     db.session.commit()
     return json.dumps({"code": 1})

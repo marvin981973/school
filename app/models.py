@@ -180,7 +180,7 @@ class Teacher(db.Model):
                 "total": item.attendance_count,
                 "time": item.attendance_time.strftime("%Y-%m-%d"),
                 "absence": absence,
-                "ratio": absence / item.attendance_count
+                "ratio": round(absence / item.attendance_count, 2)
             })
         return {"data": records, "has_next_page": has_next_page}
 
@@ -493,17 +493,21 @@ class LostFound(db.Model):
     add_time = db.Column(db.DateTime, nullable=False, default=datetime.now)
     publisher = db.Column(db.String(30))
     publisher_name = db.Column(db.String(30))
-    title = db.Column(db.String(30))
+    place = db.Column(db.String(30))
+    lost_object = db.Column(db.String(30))
     description = db.Column(db.Text)
     img_url = db.Column(db.String(50))
+    telephone = db.Column(db.String(11))
     status = db.Column(db.String(5), nullable=False, default='0')
 
-    def __init__(self, publisher, publisher_name, title, description, img_url):
+    def __init__(self, publisher, publisher_name,lost_object, place, description, img_url, telephone):
         self.publisher = publisher
-        self.title = title
+        self.place = place
+        self.lost_object = lost_object
         self.publisher_name = publisher_name
         self.description = description
         self.img_url = img_url
+        self.telephone = telephone
 
     def __repr__(self):
         return '<LostFound %r>' % self.id

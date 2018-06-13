@@ -4,7 +4,7 @@ from app import db
 from app.modules.student import student
 from flask import session, request
 
-from app.models import Student, EstablishedCourse, AbsenceRecord, getXNXQ, EstablishedCourseNotificationCheck
+from app.models import Student, EstablishedCourse, AbsenceRecord, getXNXQ, EstablishedCourseNotificationCheck, Classes
 
 
 @student.route("/")
@@ -111,4 +111,35 @@ def check_course_notification():
         db.session.commit()
         return json.dumps({'code': 1})
     except:
+        return json.dumps({'code': -1})
+
+
+@student.route('/get_class_info')
+def get_class_info():
+    try:
+        classes = Student.query.filter(Student.number == session["user_number"]).first().classes
+        students = classes.students.paginate(1, 10, False).items
+        return json.dumps({'class': {
+            'id': classes.id,
+            'name': classes.name,
+            'nick_name': classes.nick_name,
+            'create_time': classes.create_time.strftime("%Y-%m-%d %H:%M:%S"),
+            'count': classes.students.count(),
+            'college_name': classes.college.name,
+            'students': [{'head_img': i.head_url, 'name': i.name} for i in students]
+        }})
+    except Exception as e:
+        return json.dumps({'code': -1})
+
+
+@student.route('/get_all_students')
+def get_all_students():
+    try:
+        students = Student.query.filter(Student.classes_id == request.args.get('class_id')).all()
+        return json.dumps({'students': [{
+            'head_img': i.head_url,
+            'name': i.name,
+            'number': i.number
+        } for i in students]})
+    except Exception as e:
         return json.dumps({'code': -1})

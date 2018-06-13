@@ -2,6 +2,8 @@ import uuid
 
 import os
 
+from PIL import Image
+
 from app import db
 from app.models import Dynamics, Student, Teacher, Comment, Collection
 from app.modules.dynamic import dynamic
@@ -162,7 +164,9 @@ def load_comment():
             Student.number == item.commenter).first() if item.commenter_type == 's' else Teacher.query.filter(
             Teacher.number == item.commenter).first()
         data.append({
+            "id": item.id,
             "head_url": commenter.head_url,
+            "commenter": item.commenter,
             "commenter_name": commenter.name,
             "time": item.add_time.strftime("%Y-%m-%d %H:%M:%S"),
             "comment": item.content
@@ -178,6 +182,17 @@ def comment():
                           data['dynamic_type'])
         comment.id = str(uuid.uuid1())
         db.session.add(comment)
+        db.session.commit()
+        return json.dumps({'code': 1})
+    except:
+        return json.dumps({'code': -1})
+
+
+@dynamic.route('/delete_comment')
+def delete_comment():
+    try:
+        comment = Comment.query.filter(Comment.id == request.args.get("id")).first()
+        db.session.delete(comment)
         db.session.commit()
         return json.dumps({'code': 1})
     except:
@@ -223,7 +238,13 @@ def upload_dynamic_image():
     try:
         file = request.files["file"]
         file_name = str(uuid.uuid1()) + "." + file.filename.split(".")[-1:][0]
-        file.save(path + "/" + file_name)
+        save_path = path + "/" + file_name
+        file.save(save_path)
+        img = Image.open(save_path)
+        height = img.size[1]
+        width = img.size[0]
+        img.thumbnail((width // 1.5, height // 1.5))
+        img.save(save_path)
         id = request.form["id"]
         dynamic = Dynamics.query.filter(Dynamics.id == id).first()
         dynamic.imges += ("#" + file_name)

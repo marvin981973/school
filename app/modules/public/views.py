@@ -3,6 +3,7 @@ import uuid
 
 import datetime
 from lxml import etree
+from PIL import Image
 
 from app import db
 from app.modules.public import public
@@ -17,7 +18,7 @@ from app.config import wx_config
 
 from app.tools.WebPageParsing import ScrapyPage
 from app.models import UserBind, SchoolScenery, Teacher, Student, Comment, Dynamics, AbsenceRecord, getXNXQ, \
-    EstablishedCourseNotificationCheck, EstablishedCourseNotification, Notification, EstablishedCourse
+    EstablishedCourseNotificationCheck, EstablishedCourseNotification, Notification, EstablishedCourse, Feedback
 
 
 @public.route('/')
@@ -58,7 +59,7 @@ def check_user():
             session['user_number'] = bind.number
             session['user_type'] = bind.identity_type
             return json.dumps(
-                {'code': '1', 'msg': '', 'user_type': bind.identity_type, 'notification': init_notification()})
+                {'code': '1', 'msg': '', 'user_type': bind.identity_type, 'user_number': bind.number, 'notification': init_notification()})
         session['open_id'] = open_id
         return json.dumps({'code': '0', 'msg': ''})
     except:
@@ -146,15 +147,31 @@ def upload_user_head():
         os.makedirs(path)
     file = request.files["file"]
     file_name = str(uuid.uuid1()) + "." + file.filename.split(".")[-1:][0]
-    file.save(path + "/" + file_name)
+    save_path = path + "/" + file_name
+    file.save(save_path)
+    img = Image.open(save_path)
+    height = img.size[1]
+    width = img.size[0]
+    crop_width = width if width < height else height
+    if width < height:
+        temp = height // 2 - crop_width // 2
+        region = (0, temp, crop_width, temp + crop_width)
+    else:
+        temp = width // 2 - crop_width // 2
+        region = (temp, 0, temp + crop_width, crop_width)
+    cropImg = img.crop(region)
+    cropImg.thumbnail((200, 200))
+    cropImg.save(save_path)
     return json.dumps({"code": 1, "file_name": file_name})
 
 
 @public.route('/user_head/<image_id>')
 def user_head(image_id):
-    image = open('app/upload/user.py/images/{}'.format(image_id), 'rb')
-    return Response(image, mimetype='image/jpeg')
-
+    try:
+        image = open('app/upload/user/images/{}'.format(image_id), 'rb')
+        return Response(image, mimetype='image/jpeg')
+    except:
+        return None;
 
 @public.route("/save_user_info", methods=["POST"])
 def save_user_info():
@@ -252,6 +269,21 @@ def get_system_message():
             "content": item.content
         })
     return json.dumps({"has_next_page": has_next_page, "data": data})
+
+
+@public.route("/add_feedback", methods=["POST"])
+def add_feedback():
+    try:
+        name = Student.query.filter_by(number=session["user_number"]).first().name if session[
+                                                                                          "user_type"] == 's' else Teacher.query.filter_by(
+            number=session['user_number']).first().name
+        feedback = Feedback(session["user_number"], name, json.loads(request.data.decode())['feedback'])
+        feedback.id = str(uuid.uuid1())
+        db.session.add(feedback)
+        db.session.commit()
+        return json.dumps({"code": 1})
+    except Exception as e:
+        return json.dumps({"code": -1})
 
 
 if __name__ == "__main__":
