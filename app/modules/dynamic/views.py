@@ -265,6 +265,16 @@ def get_my_dynamic():
     return json.dumps({"has_next_page": has_next_page, "data": data})
 
 
+@dynamic.route('/get_user_dynamic')
+def get_user_dynamic():
+    cur_page = int(request.args.get("page"))
+    pagination = Dynamics.query.filter(Dynamics.publisher_number == request.args.get("user_number")).order_by(
+        db.desc(Dynamics.add_time)).paginate(cur_page, 20, False)
+    has_next_page = (False if pagination.page == pagination.pages else True)
+    data = format_dynamic(pagination.items)
+    return json.dumps({"has_next_page": has_next_page, "data": data})
+
+
 @dynamic.route('/delete_dynamic')
 def delete_dynamic():
     try:

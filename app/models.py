@@ -81,6 +81,9 @@ class Student(db.Model):
     head_url = db.Column(db.String(50))
     telephone = db.Column(db.String(11))
     mail = db.Column(db.String(50))
+    hobbies = db.Column(db.String(100))
+    hometown = db.Column(db.String(50))
+    profile_permission = db.Column(db.String(30))
     absence_records = db.relationship('AbsenceRecord', backref='student', lazy='dynamic')
     selected_courses = db.relationship('SelectedCourse', backref='student', lazy='dynamic')
 
@@ -133,8 +136,11 @@ class Teacher(db.Model):
     birth_day = db.Column(db.DateTime)
     head_url = db.Column(db.String(50))
     telephone = db.Column(db.String(11))
+    hobbies = db.Column(db.String(100))
+    hometown = db.Column(db.String(50))
     mail = db.Column(db.String(50))
     education = db.Column(db.String(30))
+    profile_permission = db.Column(db.String(30))
     established_courses = db.relationship('EstablishedCourse', backref='teacher', lazy='dynamic')
 
     def __init__(self, number):

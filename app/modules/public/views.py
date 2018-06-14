@@ -59,7 +59,8 @@ def check_user():
             session['user_number'] = bind.number
             session['user_type'] = bind.identity_type
             return json.dumps(
-                {'code': '1', 'msg': '', 'user_type': bind.identity_type, 'user_number': bind.number, 'notification': init_notification()})
+                {'code': '1', 'msg': '', 'user_type': bind.identity_type, 'user_number': bind.number,
+                 'notification': init_notification()})
         session['open_id'] = open_id
         return json.dumps({'code': '0', 'msg': ''})
     except:
@@ -119,20 +120,26 @@ def school_scenery():
 
 @public.route("/get_user_info")
 def get_user_info():
-    user = Teacher.query.filter(Teacher.number == session["user_number"]).first() if session[
-                                                                                         "user_type"] == 't' else Student.query.filter(
-        Student.number == session["user_number"]).first()
+    user_number = request.args.get('user_number')
+    user = Student.query.filter(Student.number == user_number).first()
+    user_type = 's'
+    if user is None:
+        user = Teacher.query.filter(Teacher.number == user_number).first()
+        user_type = 't'
     return json.dumps({
-        "img_url": user.head_url,
-        "name": user.name,
-        "signature": user.signature
-    }) if request.args.get("mode") == '0' else json.dumps({
         "img_url": user.head_url,
         "name": user.name,
         "signature": user.signature,
         "number": user.number,
         "age": user.age,
         "sex": user.sex,
+        "college": user.college.name,
+        "classes": user.classes.name if user_type == 's' else None,
+        'mail': user.mail,
+        'hobbies': user.hobbies,
+        'hometown': user.hometown,
+        'profile_permission': user.profile_permission,
+        'telephone': user.telephone,
         "birth_day": user.birth_day.strftime(
             "%Y-%m-%d") if user.birth_day else (datetime.datetime.now() - datetime.timedelta(
             days=365 * user.age)).strftime("%Y-%m-%d"),
@@ -162,6 +169,16 @@ def upload_user_head():
     cropImg = img.crop(region)
     cropImg.thumbnail((200, 200))
     cropImg.save(save_path)
+    user_number = request.form["user"]
+    user = Student.query.filter(Student.number == user_number).first()
+    if user is None:
+        user = Teacher.query.filter(Teacher.number == user_number).first()
+    try:
+        os.remove(path + "/" + user.head_url)
+    except:
+        pass
+    user.head_url = file_name
+    db.session.commit()
     return json.dumps({"code": 1, "file_name": file_name})
 
 
@@ -173,20 +190,21 @@ def user_head(image_id):
     except:
         return None;
 
-@public.route("/save_user_info", methods=["POST"])
+
+@public.route("/save_user_info")
 def save_user_info():
     try:
-        data = json.loads(request.data.decode())
-        user = Teacher.query.filter(Teacher.number == session["user_number"]).first() if session[
-                                                                                             "user_type"] == 't' else Student.query.filter(
-            Student.number == session["user_number"]).first()
-        user.head_url = data["img_url"]
-        user.birth_day = datetime.datetime.strptime(data["birth_day"], "%Y-%m-%d")
-        user.age = data["age"]
-        user.signature = data["signature"]
+        user_number = session["user_number"]
+        user_type = session["user_type"]
+        user = Teacher.query.filter(
+            Teacher.number == user_number).first() if user_type == 't' else Student.query.filter(
+            Student.number == user_number).first()
+        setattr(user, request.args.get('name'),
+                datetime.datetime.strptime(request.args.get('value'), "%Y-%m-%d") if request.args.get(
+                    'name') == 'birth_day' else request.args.get('value'))
         db.session.commit()
         return json.dumps({"code": 1})
-    except:
+    except Exception as e:
         return json.dumps({"code": -1})
 
 
