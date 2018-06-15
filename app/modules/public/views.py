@@ -97,11 +97,22 @@ def get_user_type():
     return json.dumps({"user_type": session["user_type"]})
 
 
+@public.route('/get_week')
+def get_week():
+    try:
+        html = ScrapyPage('http://211.70.149.139:84/jxz.aspx')
+        selector = etree.HTML(html)
+        tr = selector.xpath("//table/tr")[1]
+        week = tr.xpath("./td/font/text()")[0].strip()
+        return json.dumps({'code': 1, 'week': week})
+    except:
+        return json.dumps({'code': -1})
+
+
 @public.route('/get_weather')
 def get_weather():
-    city_code = request.args.get('city_code')
-    res = Weather.get_weather(city_code)
-    return res
+    res = Weather.get_weather(request.args.get('lon'), request.args.get('lat'))
+    return json.dumps(res)
 
 
 @public.route('/school_scenery')

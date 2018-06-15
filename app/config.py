@@ -32,3 +32,7 @@ wx_config = {
     'appid': 'wx8630b25104aea1d8',
     'secret': '7156d3e922bb934d1819e5410abddd07'
 }
+
+weather_config = {
+    'AppKey': 'b4f039195a3ee3eb9c16b32f95b93b5d'
+}

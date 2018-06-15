@@ -126,7 +126,7 @@ def get_class_info():
             'create_time': classes.create_time.strftime("%Y-%m-%d %H:%M:%S"),
             'count': classes.students.count(),
             'college_name': classes.college.name,
-            'students': [{'head_img': i.head_url, 'name': i.name} for i in students]
+            'students': [{'head_img': i.head_url, 'name': i.name, 'number': i.number} for i in students]
         }})
     except Exception as e:
         return json.dumps({'code': -1})
